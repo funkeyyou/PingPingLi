@@ -1,0 +1,1580 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>評評狸 · 後台管理</title>
+<style>
+  :root { --bg:#141110; --surface:#221d1b; --surface2:#2e2724; --text:#f2ece9; --sub:#9b8e87; --brand:#e8833a; --danger:#e5544b; --ok:#3fa372; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 -apple-system,"PingFang TC","Microsoft JhengHei",sans-serif; }
+  a { color:var(--brand); }
+  .wrap { max-width:860px; margin:0 auto; padding:18px; }
+  header { display:flex; align-items:center; gap:10px; padding:14px 18px; position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--surface2); z-index:10; }
+  header .logo { width:34px;height:34px;border-radius:9px;background:var(--brand);display:flex;align-items:center;justify-content:center;font-weight:800;color:#141110; }
+  header h1 { font-size:17px; margin:0; flex:1; }
+  button { font:inherit; cursor:pointer; border:0; border-radius:10px; padding:9px 14px; background:var(--surface2); color:var(--text); }
+  button.primary { background:var(--brand); color:#141110; font-weight:700; }
+  button.danger { background:rgba(229,84,75,.16); color:var(--danger); font-weight:700; }
+  button.ghost { background:transparent; color:var(--sub); }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select { font:inherit; background:var(--surface2); color:var(--text); border:1px solid #3a322e; border-radius:10px; padding:9px 11px; width:100%; }
+  label { font-size:12px; color:var(--sub); display:block; margin:10px 0 4px; }
+  .card { background:var(--surface); border:1px solid var(--surface2); border-radius:14px; padding:14px; margin-bottom:12px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .pill { font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; background:var(--surface2); color:var(--sub); }
+  .pill.warn { background:rgba(229,84,75,.16); color:var(--danger); }
+  .pill.ok { background:rgba(63,163,114,.16); color:var(--ok); }
+  .tabs { display:flex; gap:6px; padding:10px 18px 0; flex-wrap:wrap; }
+  .tabs button.active { background:var(--brand); color:#141110; font-weight:700; }
+  .muted { color:var(--sub); font-size:13px; }
+  .hidden { display:none; }
+  h2 { font-size:15px; margin:4px 0 10px; }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:var(--surface2); padding:10px 16px; border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.4); opacity:0; transition:.25s; }
+  .toast.show { opacity:1; }
+  .empty { text-align:center; color:var(--sub); padding:30px 0; }
+  .grow { flex:1; min-width:120px; }
+  .drop { border:1.5px dashed #4a403b; border-radius:12px; padding:22px; text-align:center; color:var(--sub); cursor:pointer; transition:.15s; margin-top:4px; }
+  .drop.over { border-color:var(--brand); background:rgba(232,131,58,.08); color:var(--brand); }
+  .preview { max-height:140px; margin-top:10px; border-radius:10px; display:block; border:1px solid var(--surface2); }
+</style>
+</head>
+<body>
+
+<!-- 登入畫面 -->
+<div id="login" class="wrap" style="max-width:380px;margin-top:12vh;">
+  <div style="text-align:center;margin-bottom:18px;">
+    <div class="logo" style="width:60px;height:60px;border-radius:16px;font-size:26px;margin:0 auto 12px;">狸</div>
+    <h1 style="margin:0;">評評狸 · 後台管理</h1>
+    <p class="muted">用管理員帳號登入</p>
+  </div>
+  <div class="card">
+    <label>Email</label>
+    <input id="email" type="email" autocomplete="username" placeholder="admin@example.com" />
+    <label>密碼</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" />
+    <button class="primary" style="width:100%;margin-top:14px;" onclick="doLogin()">登入</button>
+    <p id="loginErr" class="muted" style="color:var(--danger);"></p>
+  </div>
+</div>
+
+<!-- 管理畫面 -->
+<div id="app" class="hidden">
+  <header>
+    <div class="logo">狸</div>
+    <h1>後台管理</h1>
+    <span id="who" class="muted"></span>
+    <button class="ghost" onclick="doLogout()">登出</button>
+  </header>
+  <div class="tabs">
+    <button data-tab="dashboard" class="active" onclick="switchTab('dashboard')">儀表板</button>
+    <button data-tab="retention" onclick="switchTab('retention')">📊 留存</button>
+    <button data-tab="reports" onclick="switchTab('reports')">檢舉審核</button>
+    <button data-tab="moderation" onclick="switchTab('moderation')">留言審核</button>
+    <button data-tab="userlookup" onclick="switchTab('userlookup')">用戶查詢</button>
+    <button data-tab="data" onclick="switchTab('data')">內容管理</button>
+    <button data-tab="news" onclick="switchTab('news')">狸聞</button>
+    <button data-tab="broadcast" onclick="switchTab('broadcast')">公告</button>
+    <button data-tab="automation" onclick="switchTab('automation')">自動化</button>
+    <button data-tab="bans" onclick="switchTab('bans')">封禁管理</button>
+    <button data-tab="roles" onclick="switchTab('roles')">權限</button>
+    <button data-tab="assets" onclick="switchTab('assets')">設計資源</button>
+    <button data-tab="boards" onclick="switchTab('boards')">板塊管理</button>
+  </div>
+  <div class="wrap">
+    <section id="tab-dashboard"></section>
+    <section id="tab-retention" class="hidden"></section>
+    <section id="tab-reports" class="hidden"></section>
+    <section id="tab-moderation" class="hidden"></section>
+    <section id="tab-userlookup" class="hidden"></section>
+    <section id="tab-data" class="hidden"></section>
+    <section id="tab-news" class="hidden"></section>
+    <section id="tab-broadcast" class="hidden"></section>
+    <section id="tab-automation" class="hidden"></section>
+    <section id="tab-bans" class="hidden"></section>
+    <section id="tab-roles" class="hidden"></section>
+    <section id="tab-assets" class="hidden"></section>
+    <section id="tab-boards" class="hidden"></section>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ---- 設定（publishable key 是 client 安全的；後台靠「管理員登入 + 權限規則」授權，不放任何祕密金鑰）----
+const SUPABASE_URL = "https://zhddqdfbzypvvyqmqxif.supabase.co";
+const SUPABASE_KEY = "sb_publishable_vpoHuAaAFtqZkCpiTrq7Eg_8v1uhUUA";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const REASON = { spam:"垃圾/廣告", harass:"騷擾/辱罵", sexual:"色情/不當", hate:"仇恨言論", other:"其他" };
+const $ = (s)=>document.querySelector(s);
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
+function esc(s){ return (s??"").toString().replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function short(id){ return id ? "JR"+id.slice(0,6) : "—"; }
+
+// ---- 登入 ----
+async function doLogin(){
+  $("#loginErr").textContent="";
+  const email=$("#email").value.trim(), password=$("#password").value;
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ $("#loginErr").textContent="登入失敗："+error.message; return; }
+  await afterLogin(data.user);
+}
+async function afterLogin(user){
+  const { data:prof } = await sb.from("profiles").select("is_admin,display_name").eq("id",user.id).single();
+  if(!prof || !prof.is_admin){
+    $("#loginErr").textContent="這個帳號不是管理員（需先把 is_admin 設成 true）。";
+    await sb.auth.signOut(); return;
+  }
+  $("#login").classList.add("hidden");
+  $("#app").classList.remove("hidden");
+  $("#who").textContent = (prof.display_name||user.email);
+  loadDashboard();
+}
+async function doLogout(){ await sb.auth.signOut(); location.reload(); }
+
+// ---- 分頁 ----
+function switchTab(t){
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active", b.dataset.tab===t));
+  ["dashboard","retention","reports","moderation","userlookup","data","news","broadcast","automation","bans","roles","assets","boards"].forEach(x=>$("#tab-"+x).classList.toggle("hidden", x!==t));
+  ({dashboard:loadDashboard, retention:loadRetention, reports:loadReports, moderation:loadModeration, userlookup:loadUserLookup, data:loadData, news:loadNews, broadcast:loadBroadcast, automation:loadAutomation, bans:loadBans, roles:loadRoles, assets:loadAssets, boards:loadBoards})[t]();
+}
+
+// ---- 儀表板（數據總覽）----
+async function loadDashboard(){
+  const el=$("#tab-dashboard"); el.innerHTML='<p class="muted">載入中…</p>';
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayISO = today.toISOString(), nowISO = new Date().toISOString();
+  async function cnt(table, filt){
+    let q = sb.from(table).select("*", { count:"exact", head:true });
+    if(filt) q = filt(q);
+    const { count, error } = await q;
+    return error ? null : count;
+  }
+  const [realU, botU, todayU, comAll, comToday, ratAll, topAll, banned, annAll] = await Promise.all([
+    cnt("profiles", q=>q.eq("is_bot",false)),
+    cnt("profiles", q=>q.eq("is_bot",true)),
+    cnt("profiles", q=>q.eq("is_bot",false).gte("created_at",todayISO)),
+    cnt("comments"),
+    cnt("comments", q=>q.gte("created_at",todayISO)),
+    cnt("ratings"),
+    cnt("topics"),
+    cnt("profiles", q=>q.or("ban_permanent.eq.true,banned_until.gt."+nowISO)),
+    cnt("announcements"),
+  ]);
+  const f=(n)=> n==null ? "—" : n.toLocaleString();
+  const card=(num,label,sub)=>`<div class="card" style="text-align:center;min-width:140px;flex:1;">
+      <div style="font-size:30px;font-weight:800;color:var(--text);line-height:1.1;">${f(num)}</div>
+      <div class="muted" style="font-size:13px;margin-top:4px;">${label}</div>
+      ${sub?`<div class="muted" style="font-size:11px;">${sub}</div>`:""}</div>`;
+  el.innerHTML = `<h2>數據總覽</h2>
+    <div class="row" style="flex-wrap:wrap;gap:10px;">
+      ${card(realU,"真人用戶", botU!=null?`機器人 ${f(botU)}`:"")}
+      ${card(todayU,"今日新增真人")}
+      ${card(banned,"目前封禁中")}
+      ${card(topAll,"總話題")}
+      ${card(comAll,"總留言", comToday!=null?`今日 +${f(comToday)}`:"")}
+      ${card(ratAll,"總評分")}
+      ${card(annAll,"已發公告")}
+    </div>
+    <p class="muted" style="margin-top:12px;">「真人」＝非機器人帳號；機器人是暖場用的固定人設，留言/評分多由它們產生（總數含機器人）。</p>`;
+}
+
+// ---- 留存儀表板（真人 vs 機器人、活躍貢獻留存）----
+async function loadRetention(){
+  const el=$("#tab-retention"); el.innerHTML='<p class="muted">載入中…（真人資料量小，通常很快）</p>';
+  const DAY=86400000;
+  const now=new Date();
+  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
+  const today=startOfDay(now), todayISO=today.toISOString();
+  const d7ISO=new Date(today.getTime()-6*DAY).toISOString();   // 近 7 天（含今天）
+  function ageDays(d){ return Math.floor((now - startOfDay(d))/DAY); }
+
+  async function cnt(table, filt){
+    let q=sb.from(table).select("*",{count:"exact",head:true});
+    if(filt) q=filt(q);
+    const {count,error}=await q; return error?null:count;
+  }
+  // 分頁抓全部，避開 Supabase 單次 1000 列上限
+  async function fetchAll(table, cols, build){
+    let out=[], from=0; const step=1000;
+    for(;;){
+      let q=sb.from(table).select(cols).order("created_at",{ascending:true}).range(from, from+step-1);
+      if(build) q=build(q);
+      const {data,error}=await q;
+      if(error){ console.error("fetchAll",table,error); break; }
+      out=out.concat(data||[]);
+      if(!data || data.length<step) break;
+      from+=step;
+    }
+    return out;
+  }
+
+  // 1) 真人名單（is_bot=false）
+  const realProfs=await fetchAll("profiles","id,display_name,created_at,is_admin",q=>q.eq("is_bot",false));
+  const realIds=realProfs.map(p=>p.id);
+  const botU=await cnt("profiles",q=>q.eq("is_bot",true));
+  if(realIds.length===0){
+    el.innerHTML='<h2>留存儀表板</h2><p class="empty">目前還沒有真人帳號（is_bot=false）。機器人 '+(botU||0)+' 隻。等真人註冊後，這裡會自動顯示真人留存與真人 vs 機器人貢獻占比。</p>';
+    return;
+  }
+  // 切塊（in() 一次別塞太多 id）
+  const chunks=[]; for(let i=0;i<realIds.length;i+=150) chunks.push(realIds.slice(i,i+150));
+
+  // 2) 全站 vs 真人 貢獻數（head count）
+  async function realCount(table,col,extra){
+    let s=0; for(const ch of chunks){ s+=(await cnt(table,q=>{q=q.in(col,ch); return extra?extra(q):q;}))||0; } return s;
+  }
+  const [ratTotal,comTotal,topTotal,ratReal,comReal,topReal]=await Promise.all([
+    cnt("ratings"),
+    cnt("comments"),
+    cnt("topics",q=>q.eq("type","user_topic")),
+    realCount("ratings","user_id"),
+    realCount("comments","user_id"),
+    realCount("topics","created_by",q=>q.eq("type","user_topic")),
+  ]);
+
+  // 3) 真人活動列（評分/留言/發帖）
+  async function gather(table,cols,col,extra){
+    let o=[]; for(const ch of chunks){ o=o.concat(await fetchAll(table,cols,q=>{q=q.in(col,ch); return extra?extra(q):q;})); } return o;
+  }
+  const [rRows,cRows,tRows]=await Promise.all([
+    gather("ratings","user_id,created_at","user_id"),
+    gather("comments","user_id,created_at,body,target_id","user_id"),
+    gather("topics","created_by,created_at,title","created_by",q=>q.eq("type","user_topic")),
+  ]);
+
+  // 4) 每位真人：註冊日 + 活動日 offset 集合
+  const U={}; realProfs.forEach(p=>{ U[p.id]={name:p.display_name, signup:new Date(p.created_at), days:new Set(), odays:new Set(), acts:0, admin:p.is_admin}; });
+  const actToday=new Set(), act7=new Set();
+  function addAct(uid,ts){ const u=U[uid]; if(!u)return; u.acts++; u.days.add(Math.floor((new Date(ts)-startOfDay(u.signup))/DAY)); if(ts>=todayISO)actToday.add(uid); if(ts>=d7ISO)act7.add(uid); }
+  rRows.forEach(r=>addAct(r.user_id,r.created_at));
+  cRows.forEach(c=>addAct(c.user_id,c.created_at));
+  tRows.forEach(t=>addAct(t.created_by,t.created_at));
+
+  // 4.5) 開啟事件（app_opens）：每位真人的「開啟日 offset」集合＝量開啟留存（含只看不互動的回訪）
+  const openToday=new Set(), open7=new Set();
+  { let opens=[];
+    for(const ch of chunks){
+      let from=0; const step=1000;
+      for(;;){
+        const {data,error}=await sb.from("app_opens").select("user_id,day").in("user_id",ch).order("day",{ascending:true}).range(from,from+step-1);
+        if(error){ console.error("app_opens",error); break; }
+        opens=opens.concat(data||[]);
+        if(!data||data.length<step) break;
+        from+=step;
+      }
+    }
+    opens.forEach(o=>{ const u=U[o.user_id]; if(!u)return;
+      const dd=startOfDay(new Date(o.day+"T00:00:00"));
+      u.odays.add(Math.floor((dd-startOfDay(u.signup))/DAY));
+      const iso=dd.toISOString(); if(iso>=todayISO)openToday.add(o.user_id); if(iso>=d7ISO)open7.add(o.user_id);
+    });
+  }
+
+  const arr=Object.values(U);
+  const admins=arr.filter(u=>u.admin).length;
+  const contributors=arr.filter(u=>u.acts>0).length;
+  const lurkers=arr.length-contributors;
+  const newToday=arr.filter(u=>ageDays(u.signup)===0).length;
+
+  // 5) cohort（按註冊週一）
+  function weekKey(d){ const x=startOfDay(d); const off=(x.getDay()+6)%7; x.setDate(x.getDate()-off); return x.toISOString().slice(0,10); }
+  const cohorts={}; arr.forEach(u=>{ (cohorts[weekKey(u.signup)]=cohorts[weekKey(u.signup)]||[]).push(u); });
+  function retN(users,N){
+    const elig=users.filter(u=>ageDays(u.signup)>=N);
+    if(elig.length===0) return '<span class="muted">—</span>';
+    const ret=elig.filter(u=>[...u.days].some(d=>d>=N)).length;
+    const pct=Math.round(100*ret/elig.length);
+    const col= pct>=15?'var(--ok)': pct>0?'var(--text)':'var(--muted)';
+    return `<span style="color:${col};font-weight:700;">${pct}%</span> <span class="muted" style="font-size:11px;">${ret}/${elig.length}</span>`;
+  }
+  // 開啟留存：註冊第 N 天（含）以後是否還「開過 App」（不需互動）
+  function retOpen(users,N){
+    const elig=users.filter(u=>ageDays(u.signup)>=N);
+    if(elig.length===0) return '<span class="muted">—</span>';
+    const ret=elig.filter(u=>[...u.odays].some(d=>d>=N)).length;
+    const pct=Math.round(100*ret/elig.length);
+    const col= pct>=15?'var(--ok)': pct>0?'var(--text)':'var(--muted)';
+    return `<span style="color:${col};font-weight:700;">${pct}%</span> <span class="muted" style="font-size:11px;">${ret}/${elig.length}</span>`;
+  }
+
+  // ---- 渲染 ----
+  const f=n=> n==null?"—":n.toLocaleString();
+  const pc=(a,b)=> (b&&b>0)? Math.round(100*a/b)+"%" : "—";
+  const card=(num,label,sub)=>`<div class="card" style="text-align:center;min-width:120px;flex:1;">
+      <div style="font-size:28px;font-weight:800;color:var(--text);line-height:1.1;">${num}</div>
+      <div class="muted" style="font-size:13px;margin-top:4px;">${label}</div>
+      ${sub?`<div class="muted" style="font-size:11px;">${sub}</div>`:""}</div>`;
+
+  const cohortRows=Object.keys(cohorts).sort().reverse().map(k=>{
+    const us=cohorts[k];
+    return `<tr><td style="padding:6px 10px;">${k} 那週</td>
+      <td style="text-align:center;">${us.length}</td>
+      <td style="text-align:center;">${retN(us,1)}</td>
+      <td style="text-align:center;">${retN(us,7)}</td>
+      <td style="text-align:center;">${retN(us,30)}</td></tr>`;
+  }).join("") || `<tr><td colspan="5" class="muted" style="padding:8px 10px;">尚無資料</td></tr>`;
+
+  const openCohortRows=Object.keys(cohorts).sort().reverse().map(k=>{
+    const us=cohorts[k];
+    return `<tr><td style="padding:6px 10px;">${k} 那週</td>
+      <td style="text-align:center;">${us.length}</td>
+      <td style="text-align:center;">${retOpen(us,1)}</td>
+      <td style="text-align:center;">${retOpen(us,7)}</td>
+      <td style="text-align:center;">${retOpen(us,30)}</td></tr>`;
+  }).join("") || `<tr><td colspan="5" class="muted" style="padding:8px 10px;">尚無資料</td></tr>`;
+
+  const nameOf={}; realProfs.forEach(p=>nameOf[p.id]=p.display_name);
+  const feed=[
+    ...cRows.map(c=>({uid:c.user_id, ts:c.created_at, kind:'💬留言', text:(c.body||'(圖片)')})),
+    ...tRows.map(t=>({uid:t.created_by, ts:t.created_at, kind:'📝發帖', text:(t.title||'(無標題)')})),
+  ].sort((a,b)=> a.ts<b.ts?1:-1).slice(0,25).map(x=>`
+    <div style="padding:7px 0;border-bottom:1px solid var(--line);">
+      <span class="pill ok">真人</span> <b style="color:var(--text);">${esc(nameOf[x.uid]||'?')}</b>
+      <span class="muted" style="font-size:11px;">${x.kind} · ${new Date(x.ts).toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+      <div style="color:var(--text);font-size:13px;margin-top:2px;">${esc((x.text||'').slice(0,80))}</div>
+    </div>`).join("") || '<p class="muted">尚無真人留言/發帖。</p>';
+
+  el.innerHTML=`<h2>留存儀表板 <span class="muted" style="font-size:13px;font-weight:400;">真人才是真相，機器人只是佈景</span></h2>
+
+    <h3 style="margin:6px 0;">真人總覽</h3>
+    <div class="row" style="flex-wrap:wrap;gap:10px;">
+      ${card(f(arr.length),"真人帳號", admins?`含管理員 ${admins}`:"")}
+      ${card(f(contributors),"有貢獻過", `潛水 ${f(lurkers)}（只註冊0互動）`)}
+      ${card(f(actToday.size),"今日活躍真人")}
+      ${card(f(act7.size),"近 7 天活躍真人")}
+      ${card(f(newToday),"今日新增真人")}
+      ${card(pc(contributors,arr.length),"真人貢獻率", "有互動 / 全部真人")}
+    </div>
+
+    <h3 style="margin:16px 0 6px;">真人 vs 機器人 貢獻占比</h3>
+    <div class="row" style="flex-wrap:wrap;gap:10px;">
+      ${card(`${f(ratReal)} <span class="muted" style="font-size:14px;">/ ${f(ratTotal)}</span>`,"評分（真人/全站）", `真人占 ${pc(ratReal,ratTotal)}`)}
+      ${card(`${f(comReal)} <span class="muted" style="font-size:14px;">/ ${f(comTotal)}</span>`,"留言（真人/全站）", `真人占 ${pc(comReal,comTotal)}`)}
+      ${card(`${f(topReal)} <span class="muted" style="font-size:14px;">/ ${f(topTotal)}</span>`,"綜合發帖（真人/全站）", `真人占 ${pc(topReal,topTotal)}`)}
+    </div>
+    <p class="muted" style="font-size:12px;margin-top:6px;">真人占比越高＝越健康。現在多半是機器人撐的，目標是讓真人占比隨時間上升。</p>
+
+    <h3 style="margin:16px 0 6px;">真人留存（按註冊週）</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--line);">
+        <th style="padding:6px 10px;">註冊週</th><th style="text-align:center;">人數</th>
+        <th style="text-align:center;">D1+ 留存</th><th style="text-align:center;">D7+ 留存</th><th style="text-align:center;">D30+ 留存</th></tr></thead>
+      <tbody>${cohortRows}</tbody>
+    </table>
+    <p class="muted" style="font-size:12px;margin-top:6px;">「活躍貢獻留存」＝該真人在註冊第 N 天（含）以後仍有<b>評分／留言／發帖</b>才算留存；分母只算註冊滿 N 天、有機會回來的人。這是「貢獻留存」（要有互動才算），下方另有「開啟留存」。</p>
+
+    <h3 style="margin:16px 0 6px;">開啟留存（按註冊週）</h3>
+    <div class="row" style="flex-wrap:wrap;gap:10px;margin-bottom:8px;">
+      ${card(f(openToday.size),"今日開啟真人")}
+      ${card(f(open7.size),"近 7 天開啟真人")}
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="color:var(--muted);text-align:left;border-bottom:1px solid var(--line);">
+        <th style="padding:6px 10px;">註冊週</th><th style="text-align:center;">人數</th>
+        <th style="text-align:center;">D1+ 開啟</th><th style="text-align:center;">D7+ 開啟</th><th style="text-align:center;">D30+ 開啟</th></tr></thead>
+      <tbody>${openCohortRows}</tbody>
+    </table>
+    <p class="muted" style="font-size:12px;margin-top:6px;">「開啟留存」＝該真人在註冊第 N 天（含）以後<b>還開過 App</b>就算（不需互動，只看不留言的回訪也算）——比貢獻留存更接近真實黏著度。資料來源＝App 冷啟／回前景回傳的 <code>app_opens</code>；使用者需更新到含此功能的 build 才會被計入（此版本前的開啟無法回溯）。</p>
+
+    <h3 style="margin:16px 0 6px;">近期真人活動</h3>
+    <div>${feed}</div>`;
+}
+
+// ---- 檢舉審核 ----
+async function loadReports(){
+  const el=$("#tab-reports"); el.innerHTML='<p class="muted">載入中…</p>';
+  const { data:reports, error } = await sb.from("reports").select("*").order("created_at",{ascending:false});
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  // 抓被檢舉留言的內容 + 被檢舉話題的標題
+  const cids=[...new Set(reports.filter(r=>r.target_type==="comment").map(r=>r.target_id))];
+  let bodies={};
+  if(cids.length){ const {data:cs}=await sb.from("comments").select("id,body").in("id",cids); (cs||[]).forEach(c=>bodies[c.id]=c.body); }
+  const tids=[...new Set(reports.filter(r=>r.target_type==="topic").map(r=>r.target_id))];
+  let topicTitles={};
+  if(tids.length){ const {data:ts}=await sb.from("topics").select("id,title").in("id",tids); (ts||[]).forEach(t=>topicTitles[t.id]=t.title); }
+  const pend = reports.filter(r=>r.status==="pending");
+  el.innerHTML = `<h2>待處理 ${pend.length} 件 · 全部 ${reports.length} 件</h2>` + (reports.length? reports.map(r=>{
+    const body = r.target_type==="comment" ? (bodies[r.target_id] ?? "（留言已刪除）")
+               : r.target_type==="topic"   ? ("話題："+(topicTitles[r.target_id] ?? "（已刪除）"))
+               : "（檢舉使用者）";
+    const st = r.status==="pending"?'<span class="pill warn">待處理</span>': r.status==="actioned"?'<span class="pill ok">已處理</span>':'<span class="pill">已忽略</span>';
+    return `<div class="card">
+      <div class="row"><span class="pill">${REASON[r.reason]||r.reason}</span>${st}<span class="muted">${new Date(r.created_at).toLocaleString()}</span></div>
+      <p style="margin:8px 0;">${esc(body)}</p>
+      <p class="muted">被檢舉者：${short(r.reported_user)} · 檢舉者：${short(r.reporter_id)}</p>
+      <div class="row" style="margin-top:6px;">
+        <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',7)">封 7 天</button>
+        <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',30)">封 30 天</button>
+        <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',0)">永久封禁</button>
+        <button onclick="setReport('${r.id}','dismissed')">忽略</button>
+        <button onclick="setReport('${r.id}','actioned')">標記已處理</button>
+      </div></div>`;
+  }).join("") : '<p class="empty">目前沒有檢舉 🎉</p>');
+}
+async function banFromReport(uid, reportId, days){
+  if(!uid || uid==="null"){ toast("這筆沒有被檢舉者 id"); return; }
+  if(!confirm(days? `封禁此使用者 ${days} 天？` : "永久封禁此使用者？")) return;
+  const until = days ? new Date(Date.now()+days*864e5).toISOString() : null;
+  const { error } = await sb.rpc("admin_set_ban",{ target:uid, until, permanent: days===0, reason:"後台依檢舉封禁" });
+  if(error){ toast("封禁失敗："+error.message); return; }
+  await sb.rpc("admin_set_report_status",{ report:reportId, new_status:"actioned" });
+  toast("已封禁並標記處理"); loadReports();
+}
+async function setReport(id, status){
+  const { error } = await sb.rpc("admin_set_report_status",{ report:id, new_status:status });
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已更新"); loadReports();
+}
+
+// ---- 共用：快速封禁（留言審核 / 用戶查詢都用）----
+async function quickBan(uid, days, after){
+  if(!uid || uid==="null"){ toast("沒有 user id"); return; }
+  if(!confirm(days? `封禁此使用者 ${days} 天？` : "永久封禁此使用者？")) return;
+  const until = days ? new Date(Date.now()+days*864e5).toISOString() : null;
+  const { error } = await sb.rpc("admin_set_ban",{ target:uid, until, permanent:days===0, reason:"後台處理" });
+  if(error){ toast("封禁失敗："+error.message); return; }
+  toast("已封禁"); if(after) after();
+}
+
+// ---- 留言審核：搜尋任何留言（不限被檢舉）→ 刪留言 / 封作者 ----
+let MOD = { rows:[], authors:{} };
+let _mft=null;
+async function loadModeration(){
+  const el=$("#tab-moderation");
+  if(!$("#mod-controls")){
+    el.innerHTML = `<h2>留言審核 · 搜尋任何留言</h2>
+      <div class="card" id="mod-controls">
+        <div class="row"><input id="mq" class="grow" placeholder="搜尋留言內容關鍵字…" oninput="onModFilter()"/></div>
+        <div class="row" style="margin-top:8px;">
+          <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="mhuman" style="width:auto" onchange="fetchMod()"/> 只看真人留言</label>
+          <span class="grow"></span><span class="muted" id="mcount"></span>
+        </div>
+        <p class="muted" style="margin:8px 0 0;font-size:12px;">站上多數留言由暖場機器人產生；勾「只看真人」過濾掉它們。最新 60 則內搜尋。</p>
+      </div>
+      <div id="mod-list"><p class="muted">載入中…</p></div>`;
+  }
+  fetchMod();
+}
+function onModFilter(){ clearTimeout(_mft); _mft=setTimeout(fetchMod, 300); }
+async function fetchMod(){
+  const q=$("#mq")?.value.trim()||"";
+  const human=$("#mhuman")?.checked||false;
+  // 用 RPC 在 server 端 join profiles 過濾：勾「只看真人」時拉的就是最近 60 則真人留言
+  //（不再是「拉最近 60 則→前面都機器人→過濾後空」）
+  const { data, error } = await sb.rpc("admin_recent_comments", { human_only:human, q, lim:60 });
+  if(error){ $("#mod-list").innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  MOD.rows = data||[]; MOD.authors={};
+  MOD.rows.forEach(r=>{ MOD.authors[r.user_id]={display_name:r.display_name, is_bot:r.is_bot}; });
+  renderMod();
+}
+function renderMod(){
+  const el=$("#mod-list"); if(!el) return;
+  const rows = MOD.rows;
+  if($("#mcount")) $("#mcount").textContent = `${rows.length} 則`;
+  el.innerHTML = rows.length ? rows.map(c=>{
+    const a=MOD.authors[c.user_id]||{};
+    const tag = a.is_bot ? '<span class="pill">🤖機器人</span>' : '<span class="pill ok">真人</span>';
+    return `<div class="card">
+      <p style="margin:0 0 6px;">${esc(c.body||"（圖片留言）")}</p>
+      <div class="row">
+        ${tag}<span class="muted">${esc(a.display_name||short(c.user_id))}</span>
+        ${c.score!=null?`<span class="pill">評分 ${c.score}</span>`:""}
+        ${c.like_count?`<span class="muted">♥ ${c.like_count}</span>`:""}
+        <span class="muted">${new Date(c.created_at).toLocaleString()}</span>
+        <span class="grow"></span>
+        <button class="danger" onclick="delComment('${c.id}')">刪留言</button>
+        <button class="danger" onclick="quickBan('${c.user_id}',7,fetchMod)">封作者7天</button>
+        <button class="danger" onclick="quickBan('${c.user_id}',0,fetchMod)">永久</button>
+      </div></div>`;
+  }).join("") : '<p class="empty">沒有符合的留言</p>';
+}
+async function delComment(cid){
+  if(!confirm("刪除這則留言？（含其底下回覆）")) return;
+  const { error } = await sb.rpc("admin_delete_comment",{ cid });
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); fetchMod();
+}
+
+// ---- 用戶查詢：id 或暱稱 → 資料 + 活動 + 動作 ----
+async function loadUserLookup(){
+  const el=$("#tab-userlookup");
+  if(!$("#ul-controls")){
+    el.innerHTML = `<h2>用戶查詢</h2>
+      <div class="card" id="ul-controls"><div class="row">
+        <input id="ulq" class="grow" placeholder="貼上 user id，或輸入暱稱搜尋…" onkeydown="if(event.key==='Enter')doUserLookup()"/>
+        <button class="primary" onclick="doUserLookup()">查詢</button>
+      </div></div>
+      <div id="ul-result"></div>`;
+  }
+}
+async function doUserLookup(){
+  const q=$("#ulq").value.trim(), out=$("#ul-result");
+  if(!q){ toast("請輸入 id 或暱稱"); return; }
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(q)){ showUser(q); return; }
+  out.innerHTML='<p class="muted">搜尋中…</p>';
+  const { data } = await sb.from("profiles").select("id,display_name,is_bot").ilike("display_name","%"+q+"%").limit(20);
+  if(!data||!data.length){ out.innerHTML='<p class="empty">查無此暱稱</p>'; return; }
+  out.innerHTML = '<p class="muted">點選用戶：</p>'+data.map(p=>`<div class="card"><div class="row">
+    <b style="color:var(--text)">${esc(p.display_name)}</b> ${p.is_bot?'<span class="pill">🤖</span>':'<span class="pill ok">真人</span>'}
+    <span class="muted grow">${short(p.id)}</span>
+    <button class="primary" onclick="showUser('${p.id}')">查看</button></div></div>`).join("");
+}
+async function showUser(uid){
+  const out=$("#ul-result"); out.innerHTML='<p class="muted">載入中…</p>';
+  const [prof, coms, cCnt, rCnt, repCnt] = await Promise.all([
+    sb.from("profiles").select("*").eq("id",uid).single(),
+    sb.from("comments").select("id,body,created_at,score").eq("user_id",uid).order("created_at",{ascending:false}).limit(15),
+    sb.from("comments").select("*",{count:"exact",head:true}).eq("user_id",uid),
+    sb.from("ratings").select("*",{count:"exact",head:true}).eq("user_id",uid),
+    sb.from("reports").select("*",{count:"exact",head:true}).eq("reported_user",uid),
+  ]);
+  if(prof.error||!prof.data){ out.innerHTML='<p class="empty">查無此用戶</p>'; return; }
+  const p=prof.data;
+  const banned = p.ban_permanent || (p.banned_until && new Date(p.banned_until)>new Date());
+  const joinDays = Math.max(1, Math.floor((Date.now()-new Date(p.created_at))/864e5)+1);
+  out.innerHTML = `<div class="card">
+    <div class="row">
+      <b style="font-size:18px;color:var(--text)">${esc(p.display_name)}</b>
+      ${p.is_admin?'<span class="pill warn">管理員</span>':''}
+      ${(p.mod_boards&&p.mod_boards.length)?'<span class="pill">版主</span>':''}
+      ${p.is_bot?'<span class="pill">🤖機器人</span>':'<span class="pill ok">真人</span>'}
+      ${banned?'<span class="pill warn">已封禁</span>':''}
+    </div>
+    <p class="muted" style="margin:6px 0;font-size:12px;">${esc(p.id)} · 加入 ${joinDays} 天</p>
+    <div class="row"><span class="pill">留言 ${cCnt.count??"—"}</span><span class="pill">評分 ${rCnt.count??"—"}</span><span class="pill">被檢舉 ${repCnt.count??"—"}</span></div>
+    <div class="row" style="margin-top:10px;">
+      ${banned
+        ? `<button onclick="unban('${p.id}');setTimeout(()=>showUser('${p.id}'),400)">解除封禁</button>`
+        : `<button class="danger" onclick="quickBan('${p.id}',7,()=>showUser('${p.id}'))">封7天</button>
+           <button class="danger" onclick="quickBan('${p.id}',30,()=>showUser('${p.id}'))">封30天</button>
+           <button class="danger" onclick="quickBan('${p.id}',0,()=>showUser('${p.id}'))">永久封禁</button>`}
+    </div></div>
+  <h2 style="font-size:15px;margin-top:14px;">最近留言（${(coms.data||[]).length}）</h2>
+  ${(coms.data&&coms.data.length)? coms.data.map(c=>`<div class="card">
+      <p style="margin:0 0 4px;">${esc(c.body||"（圖片留言）")}</p>
+      <div class="row"><span class="muted">${new Date(c.created_at).toLocaleString()}</span>
+        ${c.score!=null?`<span class="pill">評分 ${c.score}</span>`:""}<span class="grow"></span>
+        <button class="danger" onclick="delUserComment('${c.id}','${p.id}')">刪除</button></div></div>`).join("")
+    : '<p class="empty">沒有留言</p>'}`;
+}
+async function delUserComment(cid, uid){
+  if(!confirm("刪除這則留言？")) return;
+  const { error } = await sb.rpc("admin_delete_comment",{ cid });
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); showUser(uid);
+}
+
+// ---- 公告（全站推播）：撰寫 → 呼叫 broadcast Edge Function → 推播＋進通知中心 ----
+async function loadBroadcast(){
+  const el=$("#tab-broadcast");
+  if(!$("#bc-form")){
+    el.innerHTML = `<h2>全站公告 · 推播給所有人</h2>
+      <div class="card" id="bc-form">
+        <label>標題</label><input id="bc_title" placeholder="例如：新版上線、本週活動…" maxlength="40"/>
+        <label>內文</label>
+        <textarea id="bc_body" rows="3" placeholder="公告內容（會同時推播＋進 App 通知中心）" style="width:100%;font:inherit;background:var(--surface2);color:var(--text);border:1px solid #3a322e;border-radius:10px;padding:9px 11px;"></textarea>
+        <label>連結（選填）</label><input id="bc_link" placeholder="https://…（可空）"/>
+        <label>圖片（選填，顯示在公告最上方）</label>
+        <label class="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+               ondrop="event.preventDefault();this.classList.remove('over');uploadAnnImage(event.dataTransfer.files[0])">📷 拖曳或點擊上傳圖片
+          <input type="file" id="bc_file" accept="image/*" class="hidden" onchange="uploadAnnImage(this.files[0])"/>
+        </label>
+        <div class="row" style="margin-top:6px;"><input class="grow" id="bc_image" placeholder="或直接貼圖片網址 https://…（選不動檔案時可改用這個）" oninput="bcSyncPreview()"/></div>
+        <div id="bc_img_preview"></div>
+        <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:16px;">
+          <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bc_pin" style="width:auto"/> 置頂這則</label>
+          <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bc_push" checked style="width:auto"/> 同時推播到手機</label>
+          <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bc_popup" style="width:auto" onchange="$('#bc_popupfreq').style.display=this.checked?'inline-block':'none'"/> 開 App 時彈窗</label>
+          <select id="bc_popupfreq" style="display:none;width:auto"><option value="once">看過一次就不再彈</option><option value="daily">每天首次打開都彈</option></select>
+        </div>
+        <div class="row" style="margin-top:8px;gap:10px;">
+          <div class="grow"><label style="margin:0 0 2px">上線時間（選填，空＝立即上線）</label><input type="datetime-local" id="bc_pub"/></div>
+          <div class="grow"><label style="margin:0 0 2px">下線時間（選填，空＝不下線）</label><input type="datetime-local" id="bc_exp"/></div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <button class="primary" onclick="sendBroadcast()">📢 發送公告</button>
+          <span class="grow"></span><span class="muted" id="bc_status"></span>
+        </div>
+        <p class="muted" style="margin:8px 0 0;font-size:12px;">所有人都會在 App 通知中心看到；勾了推播才會額外跳到手機橫幅。設了「上線時間」就到點才出現（推播也到點才發）；「下線時間」一到就自動隱藏。置頂的會排在最上面。</p>
+      </div>
+      <h2 style="font-size:15px;margin-top:14px;">已發公告</h2>
+      <div id="bc-list"><p class="muted">載入中…</p></div>`;
+  }
+  loadAnnouncements();
+}
+async function uploadAnnImage(file, targetHidden, targetPrev){
+  if(!file || !file.type?.startsWith("image/")){ toast("請選擇圖片檔"); return; }
+  const ext=((file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,""))||"jpg";
+  toast("上傳中…");
+  const path=`announcements/a${Date.now()}-${Math.floor(Math.random()*999)}.${ext}`;
+  const { error } = await sb.storage.from("app-assets").upload(path, file, { contentType:file.type });
+  if(error){ toast("上傳失敗："+error.message); return; }
+  const url=sb.storage.from("app-assets").getPublicUrl(path).data.publicUrl;
+  $(targetHidden||"#bc_image").value=url;
+  const prev=$(targetPrev||"#bc_img_preview");
+  if(prev) prev.innerHTML=`<img class="preview" src="${esc(url)}" style="margin-top:8px"/>`;
+  toast("圖片已上傳 ✅");
+}
+function clearAnnImage(){ $("#bc_image").value=""; $("#bc_img_preview").innerHTML=""; }
+function bcSyncPreview(){ const u=$("#bc_image").value.trim(); $("#bc_img_preview").innerHTML = u?`<img class="preview" src="${esc(u)}" style="margin-top:8px"/>`:""; }
+async function sendBroadcast(){
+  const title=$("#bc_title").value.trim(), body=$("#bc_body").value.trim(), link=$("#bc_link").value.trim();
+  const push=$("#bc_push").checked, pinned=$("#bc_pin").checked, image_url=$("#bc_image").value||null;
+  const publish_at=fromLocalInput($("#bc_pub").value), expires_at=fromLocalInput($("#bc_exp").value);
+  const popup=$("#bc_popup").checked, popup_freq=$("#bc_popupfreq").value;
+  if(!title||!body){ toast("請填標題和內文"); return; }
+  if(publish_at && expires_at && new Date(expires_at)<=new Date(publish_at)){ toast("下線時間要晚於上線時間"); return; }
+  const sched = publish_at && new Date(publish_at)>new Date();
+  if(!confirm(`發送公告「${title}」？`+(sched?`（排程 ${new Date(publish_at).toLocaleString()} 上線`+(push?"、到點才推播":"")+"）":(push?"（並推播給所有人）":"（只進通知中心）")))) return;
+  $("#bc_status").textContent="發送中…";
+  const { data, error } = await sb.functions.invoke("broadcast", { body:{ title, body, link: link||null, image_url, pinned, push, publish_at, expires_at, popup, popup_freq } });
+  if(error){ $("#bc_status").textContent=""; toast("發送失敗："+(error.message||error)); return; }
+  $("#bc_status").textContent = data.scheduled ? "已排程（到上線時間才出現）" : (push ? `已發送，推播 ${data.sent}/${data.total} 台` : "已發送（未推播）");
+  $("#bc_title").value=""; $("#bc_body").value=""; $("#bc_link").value=""; $("#bc_pin").checked=false; $("#bc_pub").value=""; $("#bc_exp").value=""; $("#bc_popup").checked=false; $("#bc_popupfreq").style.display="none"; clearAnnImage();
+  toast("公告已送出"); loadAnnouncements();
+}
+let bcEditId = null;
+async function loadAnnouncements(){
+  const el=$("#bc-list"); if(!el) return;
+  const { data, error } = await sb.from("announcements").select("*")
+    .order("pinned",{ascending:false}).order("created_at",{ascending:false}).limit(40);
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  el.innerHTML = (data&&data.length)? data.map(a=> a.id===bcEditId ? annEditCard(a) : annCard(a)).join("") : '<p class="empty">還沒發過公告</p>';
+}
+function annStatus(a){
+  const now=new Date();
+  const pop = a.popup ? ` <span class="pill">🪧 彈窗${a.popup_freq==='daily'?'·每天':'·一次'}</span>` : "";
+  if(a.expires_at && new Date(a.expires_at)<=now) return '<span class="pill warn">已下線</span>'+pop;
+  if(a.publish_at && new Date(a.publish_at)>now) return `<span class="pill warn">🕒 ${new Date(a.publish_at).toLocaleString()} 上線</span>`+pop;
+  let s='<span class="pill ok">顯示中</span>';
+  if(a.expires_at) s+=` <span class="pill">⏳ ${new Date(a.expires_at).toLocaleString()} 下線</span>`;
+  return s+pop;
+}
+function annCard(a){
+  return `<div class="card"${a.pinned?' style="border:1px solid var(--brand)"':''}>
+    ${a.image_url?`<img class="preview" src="${esc(a.image_url)}" style="margin-bottom:8px"/>`:""}
+    <b style="color:var(--text)">${a.pinned?'📌 ':''}${esc(a.title)}</b>
+    <p style="margin:6px 0;">${esc(a.body)}</p>
+    ${a.link?`<a href="${esc(a.link)}" target="_blank" class="muted" style="font-size:12px">${esc(a.link)}</a>`:""}
+    <div class="row" style="margin:6px 0;">${annStatus(a)}</div>
+    <div class="row"><span class="muted" style="font-size:12px">${new Date(a.created_at).toLocaleString()}</span>
+      <span class="grow"></span>
+      <button onclick="bcTogglePin('${a.id}',${!a.pinned})">${a.pinned?'取消置頂':'置頂'}</button>
+      <button onclick="bcEdit('${a.id}')">編輯</button>
+      <button class="danger" onclick="delAnnouncement('${a.id}')">刪除</button></div>
+  </div>`;
+}
+async function bcTogglePin(id, pin){
+  const { error } = await sb.from("announcements").update({ pinned: pin }).eq("id",id);
+  if(error){ toast("失敗："+error.message); return; }
+  toast(pin?"已置頂":"已取消置頂"); loadAnnouncements();
+}
+function annEditCard(a){
+  return `<div class="card" style="background:var(--surface2)">
+    <label>標題</label><input id="bce_title_${a.id}" value="${esc(a.title)}" maxlength="40"/>
+    <label>內文</label><textarea id="bce_body_${a.id}" rows="3" style="width:100%;font:inherit;background:var(--surface);color:var(--text);border:1px solid #3a322e;border-radius:10px;padding:9px 11px;">${esc(a.body)}</textarea>
+    <label>連結（選填）</label><input id="bce_link_${a.id}" value="${esc(a.link||'')}"/>
+    <label>圖片</label>
+    <input type="hidden" id="bce_image_${a.id}" value="${esc(a.image_url||'')}"/>
+    <div id="bce_imgprev_${a.id}">${a.image_url?`<img class="preview" src="${esc(a.image_url)}"/>`:'<span class="muted">（無圖）</span>'}</div>
+    <div class="row" style="margin-top:4px;">
+      <input type="file" accept="image/*" onchange="uploadAnnImage(this.files[0],'#bce_image_${a.id}','#bce_imgprev_${a.id}')"/>
+      <button class="ghost" onclick="$('#bce_image_${a.id}').value='';$('#bce_imgprev_${a.id}').innerHTML='<span class=&quot;muted&quot;>（無圖）</span>'">移除圖片</button>
+    </div>
+    <div class="row" style="margin-top:8px;gap:10px;">
+      <div class="grow"><label style="margin:0 0 2px">上線時間</label><input type="datetime-local" id="bce_pub_${a.id}" value="${toLocalInput(a.publish_at)}"/></div>
+      <div class="grow"><label style="margin:0 0 2px">下線時間</label><input type="datetime-local" id="bce_exp_${a.id}" value="${toLocalInput(a.expires_at)}"/></div>
+    </div>
+    <div class="row" style="margin-top:8px;gap:14px;flex-wrap:wrap;">
+      <label style="margin:0;display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="bce_popup_${a.id}" ${a.popup?'checked':''} style="width:auto" onchange="$('#bce_popupfreq_${a.id}').style.display=this.checked?'inline-block':'none'"/> 開 App 時彈窗</label>
+      <select id="bce_popupfreq_${a.id}" style="${a.popup?'':'display:none;'}width:auto"><option value="once" ${a.popup_freq!=='daily'?'selected':''}>看過一次就不再彈</option><option value="daily" ${a.popup_freq==='daily'?'selected':''}>每天首次打開都彈</option></select>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button class="primary" onclick="bcSaveEdit('${a.id}')">儲存</button>
+      <button onclick="bcCancelEdit()">取消</button>
+      <span class="muted grow" style="font-size:11px;text-align:right">編輯只改顯示，不重新推播</span>
+    </div>
+  </div>`;
+}
+function bcEdit(id){ bcEditId=id; loadAnnouncements(); }
+function bcCancelEdit(){ bcEditId=null; loadAnnouncements(); }
+async function bcSaveEdit(id){
+  const title=$("#bce_title_"+id).value.trim(), body=$("#bce_body_"+id).value.trim(), link=$("#bce_link_"+id).value.trim();
+  const image_url=$("#bce_image_"+id).value||null;
+  const publish_at=fromLocalInput($("#bce_pub_"+id).value), expires_at=fromLocalInput($("#bce_exp_"+id).value);
+  const popup=$("#bce_popup_"+id).checked, popup_freq=$("#bce_popupfreq_"+id).value;
+  if(!title||!body){ toast("標題和內文不能空"); return; }
+  if(publish_at && expires_at && new Date(expires_at)<=new Date(publish_at)){ toast("下線時間要晚於上線時間"); return; }
+  const { error } = await sb.from("announcements").update({ title, body, link: link||null, image_url, publish_at, expires_at, popup, popup_freq }).eq("id",id);
+  if(error){ toast("儲存失敗："+error.message); return; }
+  bcEditId=null; toast("已更新"); loadAnnouncements();
+}
+async function delAnnouncement(id){
+  if(!confirm("刪除這則公告？（App 內也會跟著消失）")) return;
+  const { error } = await sb.from("announcements").delete().eq("id",id);
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); loadAnnouncements();
+}
+
+// ---- 封禁管理 ----
+async function loadBans(){
+  const el=$("#tab-bans"); el.innerHTML='<p class="muted">載入中…</p>';
+  const { data, error } = await sb.from("profiles").select("id,display_name,banned_until,ban_permanent,ban_reason")
+    .or("ban_permanent.eq.true,banned_until.gt."+new Date().toISOString());
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  el.innerHTML = `<h2>目前被封禁 ${data.length} 人</h2>
+    <div class="card"><label>用 user id 直接封禁</label>
+      <div class="row"><input id="banId" class="grow" placeholder="貼上 user uuid"/>
+      <button class="danger" onclick="manualBan(7)">7天</button>
+      <button class="danger" onclick="manualBan(0)">永久</button></div></div>` +
+    (data.length? data.map(p=>`<div class="card"><div class="row">
+        <b>${short(p.id)}</b>
+        ${p.ban_permanent?'<span class="pill warn">永久</span>':'<span class="pill warn">至 '+new Date(p.banned_until).toLocaleString()+'</span>'}
+        <span class="muted grow">${esc(p.ban_reason||"")}</span>
+        <button onclick="unban('${p.id}')">解除封禁</button>
+      </div></div>`).join("") : '<p class="empty">目前沒有被封禁的帳號</p>');
+}
+async function manualBan(days){
+  const uid=$("#banId").value.trim(); if(!uid){ toast("請貼上 user id"); return; }
+  const until = days ? new Date(Date.now()+days*864e5).toISOString() : null;
+  const { error } = await sb.rpc("admin_set_ban",{ target:uid, until, permanent:days===0, reason:"後台手動封禁" });
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已封禁"); loadBans();
+}
+async function unban(uid){
+  const { error } = await sb.rpc("admin_set_ban",{ target:uid, until:null, permanent:false, reason:null });
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已解除"); loadBans();
+}
+
+
+// ---- 權限（管理員／版主）：搜尋用戶 → 指派角色 ----
+let roleMap = {};        // id -> {is_admin, mod_boards}
+let roleBoards = [];     // [{category,title}]
+async function loadRoles(){
+  const el=$("#tab-roles"); el.innerHTML='<p class="muted">載入中…</p>';
+  const [{ data:roles, error }, { data:boards }] = await Promise.all([
+    sb.rpc("admin_list_roles"),
+    sb.from("boards").select("category,title").order("sort_order"),
+  ]);
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'（權限 SQL 跑了嗎？）</p>'; return; }
+  roleBoards = boards||[];
+  roleMap = {};
+  (roles||[]).forEach(r=>roleMap[r.id]={ is_admin:!!r.is_admin, mod_boards:(r.mod_boards||[]) });
+  el.innerHTML = `<h2>管理員與版主</h2>
+    <p class="muted">管理員＝全站管理＋後台登入；版主＝App 內可刪自己板塊的話題、封禁用戶。徽章會顯示在 App 暱稱旁。</p>
+    <div class="card"><label>指派新角色：貼 user id 或搜暱稱</label>
+      <div class="row"><input id="roleQuery" class="grow" placeholder="user uuid 或 暱稱關鍵字"/>
+      <button onclick="searchRoleUser()">搜尋</button></div>
+      <div id="roleSearchOut"></div></div>` +
+    ((roles&&roles.length)? roles.map(r=>roleCard(r)).join("") : '<p class="empty">還沒有任何管理員/版主</p>');
+}
+function roleCard(r){
+  const boards = roleBoards.map(b=>{
+    const on = (r.mod_boards||[]).includes(b.category);
+    return `<button class="pill ${on?'ok':''}" onclick="toggleModBoard('${r.id}','${b.category}')">${esc(b.title)}${on?' ✓':''}</button>`;
+  }).join(" ");
+  return `<div class="card"><div class="row">
+      <b>${esc(r.display_name||short(r.id))}</b>
+      ${r.is_admin?'<span class="pill warn">管理員</span>':'<span class="pill ok">版主</span>'}
+      <span class="muted">${short(r.id)}</span><span class="grow"></span>
+      <button onclick="setAdmin('${r.id}',${r.is_admin?'false':'true'})">${r.is_admin?'撤管理員':'升管理員'}</button>
+      <button class="danger" onclick="clearRole('${r.id}')">清除角色</button>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="muted">版主板塊：</span>${boards}</div>
+  </div>`;
+}
+async function searchRoleUser(){
+  const q=$("#roleQuery").value.trim(); const out=$("#roleSearchOut");
+  if(!q){ out.innerHTML=''; return; }
+  let rows=[];
+  if(/^[0-9a-f-]{36}$/i.test(q)){
+    const { data } = await sb.from("profiles").select("id,display_name,is_admin,mod_boards").eq("id",q);
+    rows=data||[];
+  }else{
+    const { data } = await sb.from("profiles").select("id,display_name,is_admin,mod_boards").ilike("display_name","%"+q+"%").limit(8);
+    rows=data||[];
+  }
+  rows.forEach(r=>roleMap[r.id]={ is_admin:!!r.is_admin, mod_boards:(r.mod_boards||[]) });
+  out.innerHTML = rows.length? rows.map(r=>`<div class="row" style="margin-top:8px">
+      <b>${esc(r.display_name||"(無暱稱)")}</b><span class="muted">${short(r.id)}</span><span class="grow"></span>
+      <button onclick="setAdmin('${r.id}',true)">設管理員</button>
+      ${roleBoards.map(b=>`<button onclick="grantMod('${r.id}','${b.category}')">版主·${esc(b.title)}</button>`).join("")}
+    </div>`).join("") : '<p class="muted" style="margin-top:8px">找不到用戶（暱稱要完全部分匹配；也可直接貼 uuid）</p>';
+}
+async function _setRole(uid, admin, boards){
+  const { error } = await sb.rpc("admin_set_role",{ target:uid, make_admin:admin, boards:boards });
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已更新"); loadRoles();
+}
+function _cur(uid){ return roleMap[uid] || { is_admin:false, mod_boards:[] }; }
+async function setAdmin(uid, admin){ _setRole(uid, admin, _cur(uid).mod_boards); }
+async function clearRole(uid){ if(confirm("清除這個人的全部角色？")) _setRole(uid, false, []); }
+async function grantMod(uid, cat){
+  const cur=_cur(uid).mod_boards.slice();
+  if(!cur.includes(cat)) cur.push(cat);
+  _setRole(uid, _cur(uid).is_admin, cur);
+}
+async function toggleModBoard(uid, cat){
+  const cur=_cur(uid).mod_boards.slice();
+  const next = cur.includes(cat) ? cur.filter(x=>x!==cat) : cur.concat([cat]);
+  _setRole(uid, _cur(uid).is_admin, next);
+}
+
+// ---- 設計資源（app_config）：拖拽/點擊上傳 + 預覽 ----
+async function loadAssets(){
+  const el=$("#tab-assets"); el.innerHTML='<p class="muted">載入中…</p>';
+  const { data:all, error } = await sb.from("app_config").select("*").order("key");
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  const data = all.filter(c=>c.key.endsWith("_url"));   // 只列素材網址；last_sync_at 等系統值不在此顯示
+  const labels = { mascot_url:"狸貓吉祥物圖", home_banner_url:"首頁頭圖" };
+  const hints  = { mascot_url:"建議 512×512 正方形、PNG 透明背景（App 內最大顯示約 288px，圓形裁切風格）",
+                   home_banner_url:"建議 1600×320 橫幅（約 5:1；整寬顯示、上下會置中裁切），JPG/PNG ≤5MB" };
+  el.innerHTML = `<h2>設計資源 · 換圖不用發版</h2>
+    <p class="muted">拖曳或點擊上傳圖片（自動存雲端並套用），也可直接貼網址。留空＝用 App 內建預設。</p>` +
+    data.map(c=>`<div class="card">
+      <label>${labels[c.key]||c.key} <span class="muted">(${c.key})</span></label>
+      ${hints[c.key]?`<p class="muted" style="margin:2px 0 4px;font-size:12px;">📐 ${hints[c.key]}</p>`:""}
+      <div class="drop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')"
+           ondrop="event.preventDefault();this.classList.remove('over');uploadAsset('${c.key}',event.dataTransfer.files[0])"
+           onclick="document.getElementById('file_${c.key}').click()">📷 拖曳圖片到這裡，或點擊選擇上傳</div>
+      <input type="file" id="file_${c.key}" accept="image/*" class="hidden" onchange="uploadAsset('${c.key}',this.files[0])"/>
+      ${c.value?`<img class="preview" src="${esc(c.value)}" onerror="this.style.display='none'"/>`:'<p class="muted" style="margin-top:8px">（目前用 App 內建預設）</p>'}
+      <label>或直接貼網址</label>
+      <div class="row"><input class="grow" id="cfg_${c.key}" value="${esc(c.value||"")}" placeholder="https://…"/>
+        <button class="primary" onclick="saveConfig('${c.key}')">儲存</button>
+        ${c.value?`<button class="ghost" onclick="saveConfigVal('${c.key}','')">清除</button>`:""}
+      </div></div>`).join("") +
+    `<div class="card"><label>頭像庫 <span class="muted">(app-assets/avatars/)</span></label>
+      <p class="muted" style="margin:2px 0 6px;font-size:12px;">📐 建議 256×256 正方形；使用者在 App 內挑選、機器人自動隨機分配。可一次選多張。</p>
+      <input type="file" accept="image/*" multiple onchange="uploadAvatars(this.files)"/>
+      <div id="avatar_grid" class="row" style="margin-top:10px;"></div></div>`;
+  loadAvatarGrid();
+}
+
+// ---- 自動化（腳本 / AI 開關）：獨立分頁 ----
+async function loadAutomation(){
+  const el=$("#tab-automation");
+  el.innerHTML = `<h2>自動化 · 腳本與 AI 開關</h2>
+    <div class="card"><label>🩺 腳本健康 <span class="muted">（每 30 分一輪；「太久沒跑」多半是 Mac 睡著或排程掛了，「上次有錯」點開細節看）</span></label>
+      <div id="script-health" style="margin-top:6px"><p class="muted">載入中…</p></div></div>
+    <p class="muted">控制爬蟲與機器人各功能的開關；關掉的功能下一輪排程（30 分鐘內）就會停。核心資料（賽程比分）平時別關。</p>
+    <div class="card"><div id="ai-switches"><p class="muted">載入中…</p></div></div>`;
+  loadScriptHealth();
+  loadAISwitches();
+}
+// ---- 腳本健康（讀 script_heartbeats）----
+// stale＝多久沒跑算「太久沒跑」（分鐘）。lol_live 每 3 分跑→門檻收緊；push_sync 只在比賽剛結束才跑→放寬。
+const SCRIPTS = [
+  { key:"cpbl_sync",      label:"賽程比分同步",      stale:90 },
+  { key:"cold_start_bot", label:"賽後暖場留言",      stale:90 },
+  { key:"news_sync",      label:"狸聞抓取",          stale:90 },
+  { key:"general_sync",   label:"綜合板投稿",        stale:90 },
+  { key:"push_sync",      label:"賽後推播",          stale:180 },
+  { key:"lol_live",       label:"LoL 主力：建賽程＋即時比分＋逐局英雄KDA＋對位（Riot，每3分）", stale:15 },
+  { key:"lol_sync",       label:"LoL 備援：Leaguepedia（只補 Riot 沒涵蓋的場；常被限流屬正常）", stale:90 },
+];
+async function loadScriptHealth(){
+  const el=$("#script-health"); if(!el) return;
+  const { data, error } = await sb.from("script_heartbeats").select("*");
+  if(error){ el.innerHTML='<span class="muted">讀取失敗：'+esc(error.message)+'</span>'; return; }
+  const map={}; (data||[]).forEach(r=>map[r.script]=r);
+  const now=Date.now();
+  el.innerHTML = SCRIPTS.map(({key:k,label:name,stale:staleMin})=>{
+    const r=map[k];
+    if(!r) return `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--surface2)">
+      <b style="color:var(--text)">${name}</b><span class="grow"></span><span class="pill">尚無紀錄</span></div>`;
+    const ageMin=Math.round((now-new Date(r.last_run))/60000);
+    const stale=ageMin>staleMin;
+    const cls=(!r.ok||stale)?"warn":"ok";
+    const status=!r.ok?"⚠️ 上次有錯":stale?"⏰ 太久沒跑":"正常";
+    const ago=ageMin<1?"剛剛":ageMin<60?`${ageMin}分前`:`${Math.round(ageMin/60)}小時前`;
+    return `<div class="row" style="padding:7px 0;border-bottom:1px solid var(--surface2)">
+      <b style="color:var(--text)">${name}</b>
+      <span class="muted" style="font-size:12px;white-space:nowrap">${ago}</span>
+      <span class="muted grow" style="font-size:11px;overflow:hidden;text-overflow:ellipsis">${esc(r.detail||"")}</span>
+      <span class="pill ${cls}" style="white-space:nowrap">${status}</span></div>`;
+  }).join("");
+}
+
+// ---- AI 自動化開關（存 app_config；排程腳本每輪開跑前讀取）----
+const AI_SWITCHES = [
+  { grp:"腳本／資料", key:"cpbl_autosync",     label:"賽程比分自動同步", desc:"抓 CPBL 賽程/比分/球員（核心資料，平時別關）" },
+  { grp:"腳本／資料", key:"lol_autosync",      label:"LoL 賽程同步（備援）", desc:"Leaguepedia 備援；主力賽程/比分/逐局/對位已由 Riot(lol_live, 每3分)負責，不受此開關影響。此開關只控制備援抓取" },
+  { grp:"腳本／資料", key:"news_autofetch",    label:"狸聞自動抓取",     desc:"Google News 抓中職新聞上架" },
+  { grp:"腳本／資料", key:"bot_general_topics", label:"綜合自動投稿",    desc:"Google News＋PTT 熱文生成話題帖，素材夠對立時自動出對決 PK 版（約 70~110 分鐘一帖、深夜放緩；PTT 帖留言量跟推文熱度連動）" },
+  { grp:"腳本／資料", key:"general_auto_cover", label:"綜合話題自動配圖", desc:"維基海報/原文配圖，寧缺勿濫（關閉＝純文字話題）" },
+  { grp:"AI 內容",   key:"news_ai_rewrite",   label:"狸聞 AI 改寫",     desc:"標題/摘要/站內短文（關閉＝用原標題上架）" },
+  { grp:"AI 內容",   key:"bot_game_comments", label:"賽事暖場留言",     desc:"棒球比賽結束後自動產生留言＋評分" },
+  { grp:"AI 內容",   key:"bot_lol_comments",  label:"LoL 賽後暖場留言", desc:"英雄聯盟比賽結束後自動產生逐局／對位留言＋評分（用 Riot 真實英雄/KDA/逐局勝負）" },
+  { grp:"AI 內容",   key:"bot_reply_comments", label:"留言自動回覆串",  desc:"機器人之間互相回覆／抬槓形成留言串（棒球＋電競共用）" },
+  { grp:"AI 內容",   key:"bot_live_seed",     label:"比賽中即時留言",   desc:"進行中比賽每輪滴灌 5~14 則邊看邊聊＋評分（只用比分，不編過程）" },
+  { grp:"AI 內容",   key:"bot_news_comments", label:"狸聞自動留言",     desc:"新聞發佈後自動補網友反應" },
+  { grp:"AI 內容",   key:"bot_general_intel", label:"綜合留言抓情報",   desc:"留言前抓新聞當事實（更像真人；關閉＝只靠標題）" },
+  { grp:"AI 內容",   key:"bot_user_topic_boost", label:"用戶帖回應保底", desc:"真人發的話題冷場 2 小時後補 3~8 則回應＋評分" },
+  { grp:"AI 內容",   key:"bot_reply_to_humans", label:"真人留言自動回覆", desc:"真人留言後，機器人機率性回一則（接既有回覆推播把真人召回）。安全：不碰政治/敏感、已被回過不插隊、隨真人密度衰減。冷啟動召回神器；真人多了可調低或關閉" },
+];
+async function loadAISwitches(){
+  const el=$("#ai-switches"); if(!el) return;
+  const { data } = await sb.from("app_config").select("key,value")
+    .in("key", AI_SWITCHES.map(s=>s.key));
+  const map={}; (data||[]).forEach(r=>map[r.key]=r.value);
+  let html="", lastGrp="";
+  for(const s of AI_SWITCHES){
+    if(s.grp!==lastGrp){ html+=`<p class="muted" style="margin:10px 0 2px;font-size:11px;letter-spacing:1px;">${s.grp}</p>`; lastGrp=s.grp; }
+    const on = (map[s.key]||"on")!=="off";
+    html+=`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--surface2);">
+      <label style="margin:0;display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" ${on?"checked":""} onchange="toggleAI('${s.key}',this.checked)" style="width:auto;transform:scale(1.2);"/>
+        <b style="color:var(--text);font-size:14px;">${s.label}</b>
+      </label>
+      <span class="muted" style="font-size:12px;">${s.desc}</span>
+      <span class="grow"></span>
+      <span class="pill ${on?"ok":"warn"}" id="aist_${s.key}">${on?"運作中":"已關閉"}</span>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+async function toggleAI(key, on){
+  const { error } = await sb.from("app_config")
+    .upsert({ key, value:on?"on":"off", updated_at:new Date().toISOString() }, { onConflict:"key" });
+  if(error){ toast("切換失敗："+error.message); loadAISwitches(); return; }
+  const pill=$("#aist_"+key);
+  if(pill){ pill.textContent=on?"運作中":"已關閉"; pill.className="pill "+(on?"ok":"warn"); }
+  toast(on?"已開啟（下一輪生效）":"已關閉（下一輪生效）");
+}
+async function loadAvatarGrid(){
+  const el=$("#avatar_grid"); if(!el) return;
+  const { data, error } = await sb.storage.from("app-assets").list("avatars", { limit: 200 });
+  if(error){ el.innerHTML='<span class="muted">（讀取失敗：'+esc(error.message)+'）</span>'; return; }
+  const files=(data||[]).filter(f=>f.name.includes("."));
+  el.innerHTML = files.length ? files.map(f=>{
+    const url=sb.storage.from("app-assets").getPublicUrl("avatars/"+f.name).data.publicUrl;
+    return `<div style="position:relative">
+      <img src="${url}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid var(--surface2)"/>
+      <button onclick="delAvatar('${esc(f.name)}')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;padding:0;border-radius:50%;background:var(--danger);color:#fff;font-size:11px;line-height:1;">✕</button>
+    </div>`;
+  }).join("") : '<span class="muted">（還沒有頭像，上傳幾張吧）</span>';
+}
+async function uploadAvatars(files){
+  if(!files || !files.length) return;
+  toast(`上傳 ${files.length} 張中…`);
+  for(const f of files){
+    const ext=((f.name.split(".").pop()||"png").toLowerCase().replace(/[^a-z0-9]/g,""))||"png";
+    const { error } = await sb.storage.from("app-assets").upload(`avatars/a${Date.now()}-${Math.floor(Math.random()*999)}.${ext}`, f, { contentType:f.type });
+    if(error){ toast("上傳失敗："+error.message); return; }
+  }
+  toast("頭像已上傳 ✅"); loadAvatarGrid();
+}
+async function delAvatar(name){
+  if(!confirm("刪除這個頭像？已選用它的使用者會自動退回文字頭像顯示。")) return;
+  const { error } = await sb.storage.from("app-assets").remove(["avatars/"+name]);
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); loadAvatarGrid();
+}
+async function uploadAsset(key, file){
+  if(!file) return;
+  if(!file.type || !file.type.startsWith("image/")){ toast("請選擇圖片檔"); return; }
+  const ext=((file.name.split(".").pop()||"png").toLowerCase().replace(/[^a-z0-9]/g,"")) || "png";
+  const path=`${key}-${Date.now()}.${ext}`;
+  toast("上傳中…");
+  const { error:upErr } = await sb.storage.from("app-assets").upload(path, file, { upsert:true, contentType:file.type });
+  if(upErr){ toast("上傳失敗："+upErr.message); return; }
+  const { data:pub } = sb.storage.from("app-assets").getPublicUrl(path);
+  await saveConfigVal(key, pub.publicUrl);
+  toast("已上傳並套用 ✅");
+}
+async function saveConfig(key){ await saveConfigVal(key, $("#cfg_"+key).value.trim()); }
+async function saveConfigVal(key, value){
+  const { error } = await sb.from("app_config").update({ value: value||null, updated_at:new Date().toISOString() }).eq("key",key);
+  if(error){ toast("寫入失敗："+error.message); return; }
+  toast("已儲存"); loadAssets();
+}
+
+// ---- 板塊管理（boards）----
+async function loadBoards(){
+  const el=$("#tab-boards"); el.innerHTML='<p class="muted">載入中…</p>';
+  const { data, error } = await sb.from("boards").select("*").order("sort_order");
+  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  el.innerHTML = `<h2>首頁頂部板塊 · 新增不用發版</h2>` +
+    data.map(b=>boardCard(b)).join("") +
+    `<div class="card"><h2>＋ 新增 Tab</h2>
+      <div class="row"><input id="nb_id" placeholder="代碼 (mlb)" class="grow"/><input id="nb_title" placeholder="顯示名 (美國職棒)" class="grow"/></div>
+      <div class="row" style="margin-top:8px;"><input id="nb_cat" placeholder="分類 (棒球)" class="grow"/><input id="nb_sort" type="number" placeholder="排序 (3)" class="grow"/></div>
+      <button class="primary" style="margin-top:10px;" onclick="addBoard()">新增</button>
+    </div>`;
+}
+function boardCard(b){
+  return `<div class="card"><div class="row">
+      <input value="${esc(b.title)}" id="bt_${b.id}" class="grow" />
+      <input value="${esc(b.category)}" id="bc_${b.id}" style="max-width:110px" />
+      <input value="${b.sort_order}" id="bs_${b.id}" type="number" style="max-width:70px" />
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <span class="pill">${b.id}</span>
+      <label style="margin:0;display:flex;align-items:center;gap:6px;"><input type="checkbox" id="ba_${b.id}" ${b.available?"checked":""} style="width:auto"/> 已上線（否＝即將推出）</label>
+      <span class="grow"></span>
+      <button class="primary" onclick="saveBoard('${b.id}')">儲存</button>
+      <button class="danger" onclick="delBoard('${b.id}')">刪除</button>
+    </div></div>`;
+}
+async function saveBoard(id){
+  const patch={ title:$("#bt_"+id).value.trim(), category:$("#bc_"+id).value.trim(),
+    sort_order:parseInt($("#bs_"+id).value||"0",10), available:$("#ba_"+id).checked };
+  const { error } = await sb.from("boards").update(patch).eq("id",id);
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已儲存"); loadBoards();
+}
+async function addBoard(){
+  const id=$("#nb_id").value.trim().toLowerCase();
+  if(!id){ toast("請填代碼"); return; }
+  const row={ id, title:$("#nb_title").value.trim()||id, category:$("#nb_cat").value.trim()||"其他",
+    sort_order:parseInt($("#nb_sort").value||"99",10), available:false };
+  const { error } = await sb.from("boards").insert(row);
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已新增（預設為「即將推出」）"); loadBoards();
+}
+async function delBoard(id){
+  if(!confirm("刪除這個 Tab？")) return;
+  const { error } = await sb.from("boards").delete().eq("id",id);
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已刪除"); loadBoards();
+}
+
+// ---- 內容管理（topics + rating_targets：搜尋/篩選 + 完整 CRUD）----
+const STATUS_LABEL = { upcoming:"未開始", live:"進行中", ended:"已結束" };
+let DT = { topics:[], cats:[], cat:null, filters:{q:"",status:"",league:""}, open:null, openKind:null, targets:{}, tOpen:null, tInfo:{}, tSummary:{} };
+
+function intToHexColor(n){ if(n==null||n<0) return "#e8833a"; return "#"+(Number(n)&0xFFFFFF).toString(16).padStart(6,"0"); }
+function hexColorToInt(h){ return parseInt((h||"#e8833a").replace("#",""),16) || 0xE8833A; }
+function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso), p=n=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+function fromLocalInput(s){ return s ? new Date(s).toISOString() : null; }
+
+// 每個分類有自己的版面/篩選（結構不同→各自獨立，重實用）。未知分類退回話題式。
+const CAT_META = {
+  "棒球": { kind:"match", label:"棒球 ⚾",    search:"搜尋隊伍 / 標題…", status:true,  league:false },
+  "電競": { kind:"lol",   label:"電競 🎮",    search:"搜尋隊伍 / 標題…", status:true,  league:true  },
+  "綜合": { kind:"topic", label:"綜合話題 💬", search:"搜尋標題 / 內文…", status:false, league:false },
+};
+function catMeta(c){ return CAT_META[c] || { kind:"topic", label:c, search:"搜尋標題…", status:false, league:false }; }
+async function loadData(){
+  if(!DT.cats.length) await loadCats();
+  if(!DT.cat || !DT.cats.includes(DT.cat)) DT.cat = DT.cats.includes("棒球") ? "棒球" : (DT.cats[0]||"棒球");
+  renderDataTab();
+  await fetchTopics();
+  loadSyncBeat();
+}
+function pickDataCat(c){
+  DT.cat=c; DT.filters={q:"",status:"",league:""}; DT.open=null; DT.openKind=null; DT.tOpen=null;
+  renderDataTab(); fetchTopics();
+}
+function renderDataTab(){
+  const m=catMeta(DT.cat);
+  $("#tab-data").innerHTML = `<h2>內容管理</h2>
+    <div class="row" style="flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+      ${DT.cats.map(c=>`<button class="${c===DT.cat?'primary':''}" onclick="pickDataCat('${esc(c)}')">${esc(catMeta(c).label)}</button>`).join("")}
+    </div>
+    <div class="card" id="data-controls">
+      <div class="row">
+        <input id="dq" class="grow" placeholder="${m.search}" value="${esc(DT.filters.q||'')}" oninput="onDataFilter()"/>
+        ${m.status?`<select id="dstatus" style="max-width:120px" onchange="onDataFilter()">
+          <option value="">全部狀態</option>
+          ${[["upcoming","未開始"],["live","進行中"],["ended","已結束"]].map(([v,l])=>`<option value="${v}"${DT.filters.status===v?' selected':''}>${l}</option>`).join("")}
+        </select>`:''}
+        ${m.league?`<select id="dleague" style="max-width:120px" onchange="onDataFilter()">
+          <option value="">全部聯賽</option>
+          ${["LCK","LCP","國際賽"].map(l=>`<option value="${l}"${DT.filters.league===l?' selected':''}>${l}</option>`).join("")}
+        </select>`:''}
+      </div>
+      <div class="row" style="margin-top:8px;">
+        ${m.kind==='lol'
+          ? `<span class="muted">🎮 電競比賽由 Riot 自動建立並即時更新，無需手動新增</span>`
+          : `<button class="primary" onclick="openNewTopic()">＋ 新增${m.kind==='match'?'比賽':'話題'}</button>`}
+        <span class="grow"></span><span class="muted" id="dcount"></span>
+      </div>
+      <p class="muted" id="dsync" style="margin:8px 0 0;"></p>
+    </div>
+    <div id="data-new"></div>
+    <div id="data-list"><p class="muted">載入中…</p></div>`;
+}
+async function loadSyncBeat(){
+  const el=$("#dsync"); if(!el) return;
+  const { data } = await sb.from("app_config").select("value").eq("key","last_sync_at").limit(1);
+  const v = data && data[0] && data[0].value;
+  el.textContent = v ? ("🛰 爬蟲上次同步："+new Date(v).toLocaleString()) : "🛰 爬蟲尚未回報過同步時間";
+}
+async function loadCats(){
+  const { data } = await sb.from("topics").select("category").neq("type","news_container");
+  const found=[...new Set((data||[]).map(t=>t.category).filter(c=>c&&c!=="_news"))];
+  const order=["棒球","電競","綜合"];
+  DT.cats = found.sort((a,b)=>((order.indexOf(a)+1||99)-(order.indexOf(b)+1||99))||a.localeCompare(b));
+}
+let _dft=null;
+function onDataFilter(){
+  clearTimeout(_dft);
+  _dft=setTimeout(()=>{
+    DT.filters.q=$("#dq")?.value.trim()||"";
+    DT.filters.status=$("#dstatus")?.value||"";
+    DT.filters.league=$("#dleague")?.value||"";
+    fetchTopics();
+  }, 250);
+}
+async function fetchTopics(){
+  let q = sb.from("topics").select("*").eq("category",DT.cat).neq("type","news_container")
+            .order("starts_at",{ascending:false,nullsFirst:false}).limit(300);
+  if(DT.filters.q){
+    const like="%"+DT.filters.q.replace(/[,()]/g," ")+"%";
+    if(catMeta(DT.cat).kind==='topic') q=q.or(`title.ilike.${like},body.ilike.${like}`);
+    else q=q.ilike("title",like);
+  }
+  if(DT.filters.status) q=q.eq("status",DT.filters.status);
+  if(DT.filters.league) q=q.eq("subcategory",DT.filters.league);
+  const { data, error } = await q;
+  if(error){ $("#data-list").innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  DT.topics = data||[];
+  if($("#dcount")) $("#dcount").textContent = `${DT.topics.length} 筆`;
+  renderDataList();
+}
+function renderDataList(){
+  const el=$("#data-list"); if(!el) return;
+  el.innerHTML = DT.topics.length ? DT.topics.map(topicRow).join("") : '<p class="empty">沒有符合條件的資料</p>';
+}
+function isMatch(t){ return t.type==='cpbl_game' || t.type==='lol_match'; }
+function topicRow(t){
+  const open=DT.open===t.id, lol=t.type==='lol_match', match=isMatch(t);
+  const sc=(t.home_score==null)?"—":(lol
+      ? `${esc(t.home_short||"")} ${t.home_score} : ${t.away_score} ${esc(t.away_short||"")}`
+      : `${esc(t.away_short||"")} ${t.away_score} : ${t.home_score} ${esc(t.home_short||"")}`);
+  const when = t.starts_at ? new Date(t.starts_at).toLocaleString() : "（無時間）";
+  return `<div class="card">
+    <div class="row">
+      ${lol&&t.subcategory?`<span class="pill">${esc(t.subcategory)}</span>`:''}
+      <span class="pill ${t.status==='live'?'warn':''}">${STATUS_LABEL[t.status]||t.status}</span>
+      ${t.locked?'<span class="pill ok">🔒 已鎖定</span>':''}
+      <b class="grow">${esc(t.title)}</b>
+    </div>
+    <p class="muted" style="margin:6px 0;">${when}${match?('　'+sc):''}</p>
+    ${(!match&&t.body)?`<p class="muted" style="margin:0 0 6px;font-size:13px;line-height:1.5;">${esc(t.body.slice(0,90))}${t.body.length>90?'…':''}</p>`:''}
+    <div class="row">
+      <button onclick="toggle('${t.id}','edit')">${open&&DT.openKind==='edit'?'收起':'編輯'}</button>
+      ${match
+        ? `<button onclick="toggle('${t.id}','targets')">${open&&DT.openKind==='targets'?'收起':(lol?'逐局 / 選手':'隊伍 / 球員')}</button>`
+        : `<button onclick="toggleTopicComments('${t.id}')">${open&&DT.openKind==='tcomments'?'收起':'留言 / 評分'}</button>`}
+      ${t.locked?`<button class="ghost" onclick="unlockTopic('${t.id}')">解鎖</button>`:''}
+      <span class="grow"></span>
+      <button class="danger" onclick="delTopic('${t.id}')">刪除</button>
+    </div>
+    ${open&&DT.openKind==='edit' ? editForm(t) : ''}
+    ${open&&DT.openKind==='targets' ? targetsPanel(t) : ''}
+    ${open&&DT.openKind==='tcomments' ? topicCommentsPanel(t) : ''}
+  </div>`;
+}
+function topicCommentsPanel(t){
+  const list=DT.targets[t.id];
+  if(!list) return `<div class="card" style="background:var(--surface2);margin-top:10px;"><p class="muted">載入中…</p></div>`;
+  const w=list.find(x=>x.parent_id==null)||list[0];
+  return w ? targetInfoPanel(w.id) : `<div class="card" style="background:var(--surface2);margin-top:10px;"><p class="muted">此話題沒有評分標的</p></div>`;
+}
+async function toggleTopicComments(topicId){
+  if(DT.open===topicId && DT.openKind==='tcomments'){ DT.open=null; DT.openKind=null; DT.tOpen=null; renderDataList(); return; }
+  DT.open=topicId; DT.openKind='tcomments'; DT.tOpen=null;
+  if(!DT.targets[topicId]) await loadTargets(topicId);
+  const list=DT.targets[topicId]||[]; const w=list.find(x=>x.parent_id==null)||list[0];
+  if(w){ DT.tOpen=w.id; if(!DT.tInfo[w.id]) await loadTargetInfo(w.id); }
+  renderDataList();
+}
+function toggle(id, kind){
+  if(DT.open===id && DT.openKind===kind){ DT.open=null; DT.openKind=null; }
+  else { DT.open=id; DT.openKind=kind; if(kind==='targets') loadTargets(id); }
+  renderDataList();
+}
+function editForm(t){
+  const game = isMatch(t), lol = t.type==='lol_match';
+  return `<div class="card" style="background:var(--surface2);margin-top:10px;">
+    <label>標題</label><input id="e_title" value="${esc(t.title)}"/>
+    <div class="row">
+      <div class="grow"><label>分類</label><input id="e_cat" value="${esc(t.category)}"/></div>
+      <div class="grow"><label>狀態</label><select id="e_status">
+        ${["upcoming","live","ended"].map(s=>`<option value="${s}" ${t.status===s?"selected":""}>${STATUS_LABEL[s]}</option>`).join("")}
+      </select></div>
+    </div>
+    ${lol?`<div class="row"><div class="grow"><label>聯賽（板塊子分頁）</label><select id="e_sub">
+        ${["LCK","LCP","國際賽"].map(s=>`<option value="${s}" ${t.subcategory===s?"selected":""}>${s}</option>`).join("")}
+      </select></div><div class="grow"><label>副標</label><input id="e_sub2" value="${esc(t.subtitle||"")}"/></div></div>`:""}
+    ${game?`<div class="row">
+        <div class="grow"><label>客隊簡稱</label><input id="e_away" value="${esc(t.away_short||"")}"/></div>
+        <div class="grow"><label>主隊簡稱</label><input id="e_home" value="${esc(t.home_short||"")}"/></div>
+      </div>
+      <div class="row">
+        <div><label>客隊色</label><input type="color" id="e_acolor" value="${intToHexColor(t.away_color)}" style="padding:2px;height:40px;width:52px"/></div>
+        <div class="grow"><label>客隊分</label><input type="number" id="e_as" value="${t.away_score??""}"/></div>
+        <div class="grow"><label>主隊分</label><input type="number" id="e_hs" value="${t.home_score??""}"/></div>
+        <div><label>主隊色</label><input type="color" id="e_hcolor" value="${intToHexColor(t.home_color)}" style="padding:2px;height:40px;width:52px"/></div>
+      </div>`:`<label>副標</label><input id="e_sub" value="${esc(t.subtitle||"")}"/>
+      <label>補充說明（內文）</label>
+      <textarea id="e_body" rows="3" style="width:100%;font:inherit;background:var(--surface2);color:var(--text);border:1px solid #3a322e;border-radius:10px;padding:9px 11px;">${esc(t.body||"")}</textarea>
+      <label>「了解詳情」連結（可空）</label><input id="e_link" value="${esc(t.origin_url||"")}" placeholder="https://…"/>
+      <label>封面網址（AI 抓錯圖時貼一張正確的；留空＝無封面）</label><input id="e_cover" value="${esc(t.cover_url||"")}" placeholder="https://…"/>`}
+    <label>開始時間</label><input type="datetime-local" id="e_start" value="${toLocalInput(t.starts_at)}"/>
+    <div class="row" style="margin-top:12px;">
+      <button class="primary" onclick="saveTopic('${t.id}')">儲存${game?"並鎖定 🔒":""}</button>
+      ${game?'<span class="muted">儲存後會鎖定，爬蟲不會再覆蓋你的修改。</span>':''}
+    </div>
+  </div>`;
+}
+async function saveTopic(id){
+  const t = DT.topics.find(x=>x.id===id); if(!t) return;
+  const game = isMatch(t), lol = t.type==='lol_match';
+  const patch = { title:$("#e_title").value.trim(), category:$("#e_cat").value.trim(),
+                  status:$("#e_status").value, starts_at: fromLocalInput($("#e_start").value) };
+  if(!patch.title||!patch.category){ toast("標題與分類不能空"); return; }
+  if(lol){ patch.subcategory=$("#e_sub").value; patch.subtitle=$("#e_sub2").value.trim()||null; }
+  if(game){
+    patch.away_short=$("#e_away").value.trim(); patch.home_short=$("#e_home").value.trim();
+    patch.away_color=hexColorToInt($("#e_acolor").value); patch.home_color=hexColorToInt($("#e_hcolor").value);
+    const as_=$("#e_as").value, hs=$("#e_hs").value;
+    patch.away_score = as_===""?null:parseInt(as_,10);
+    patch.home_score = hs===""?null:parseInt(hs,10);
+    patch.locked = true;                       // 編輯比賽 → 鎖定，避免被自動覆蓋
+  } else {
+    patch.subtitle=$("#e_sub").value.trim()||null;
+    patch.body=$("#e_body").value.trim()||null;
+    patch.origin_url=$("#e_link").value.trim()||null;
+    patch.cover_url=$("#e_cover").value.trim()||null;
+  }
+  const { error } = await sb.from("topics").update(patch).eq("id",id);
+  if(error){ toast("儲存失敗："+error.message); return; }
+  toast(game?"已儲存並鎖定 🔒":"已儲存"); DT.open=null; DT.openKind=null; fetchTopics();
+}
+async function unlockTopic(id){
+  if(!confirm("解鎖後，下次自動同步會用官方資料覆蓋這場。確定？")) return;
+  const { error } = await sb.from("topics").update({ locked:false }).eq("id",id);
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已解鎖（恢復自動更新）"); fetchTopics();
+}
+async function delTopic(id){
+  const t = DT.topics.find(x=>x.id===id); if(!t) return;
+  if(!confirm(`刪除「${t.title}」？\n會一併刪除其隊伍/球員與所有評分、留言，無法復原。`)) return;
+  const { error } = await sb.from("topics").delete().eq("id",id);
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); DT.open=null; fetchTopics();
+}
+// ---- 隊伍 / 球員（rating_targets）----
+async function loadTargets(topicId){
+  const { data, error } = await sb.from("rating_targets").select("*").eq("topic_id",topicId).order("sort_order");
+  if(error){ toast("讀取標的失敗："+error.message); return; }
+  DT.targets[topicId] = data||[]; renderDataList();
+  if((data||[]).some(x=>x.kind==='team')) loadTeamSummaries(topicId);   // 棒球：球隊評分一眼看
+}
+async function loadTeamSummaries(topicId){
+  const teams=(DT.targets[topicId]||[]).filter(x=>x.parent_id==null);
+  await Promise.all(teams.map(async tm=>{
+    const { data:rs } = await sb.from("ratings").select("score").eq("target_id",tm.id).limit(3000);
+    const n=(rs||[]).length, avg=n?rs.reduce((a,b)=>a+b.score,0)/n:0;
+    const { count } = await sb.from("comments").select("id",{count:"exact",head:true}).eq("target_id",tm.id);
+    DT.tSummary[tm.id]={ avg, n, comments:count||0 };
+  }));
+  renderDataList();
+}
+function targetsPanel(t){
+  const list = DT.targets[t.id];
+  if(!list) return `<div class="card" style="background:var(--surface2);margin-top:10px;"><p class="muted">載入中…</p></div>`;
+  if(list.some(x=>x.kind==='game'||x.kind==='series_player')) return lolTargetsPanel(t,list);  // LoL 專屬 kind；'player' 棒球也有，不能用來判別
+  const teams = list.filter(x=>x.parent_id==null);
+  const kids = pid=>list.filter(x=>x.parent_id===pid);
+  const row = (x,child)=>`<div class="row" style="margin:${child?"4px 0 4px 18px":"8px 0"};">
+      <input type="color" value="${intToHexColor(x.color_hex)}" id="t_c_${x.id}" style="padding:2px;height:36px;width:46px"/>
+      <input class="grow" value="${esc(x.name)}" id="t_n_${x.id}" placeholder="名稱"/>
+      <input value="${esc(x.subtitle||"")}" id="t_s_${x.id}" placeholder="${x.kind==='player'?"位置/角色":"副標"}" style="max-width:120px"/>
+      <input type="number" value="${x.sort_order}" id="t_o_${x.id}" style="max-width:60px" title="排序"/>
+      ${(!child&&DT.tSummary[x.id])?`<span class="pill ok" title="${DT.tSummary[x.id].n} 人評分">★${DT.tSummary[x.id].avg.toFixed(1)} · ${DT.tSummary[x.id].comments}留言</span>`:''}
+      <button class="primary" onclick="saveTarget('${x.id}','${t.id}')">存</button>
+      <button class="danger" onclick="delTarget('${x.id}','${t.id}')">刪</button>
+      <button onclick="toggleTargetInfo('${x.id}','${t.id}')">${DT.tOpen===x.id?'收起':'評分/留言'}</button>
+    </div>` + (DT.tOpen===x.id ? targetInfoPanel(x.id) : "");
+  return `<div class="card" style="background:var(--surface2);margin-top:10px;">
+    <h2>球隊 / 球員評分</h2>
+    ${teams.length?teams.map(tm=>`<div style="border-top:1px solid var(--surface);padding-top:6px;margin-top:6px;">
+        ${row(tm,false)}
+        ${kids(tm.id).map(k=>row(k,true)).join("")}
+        <div class="row" style="margin:2px 0 8px 18px;">
+          <button class="ghost" onclick="addTarget('${t.id}','player','${tm.id}')">＋ 在此隊新增球員</button>
+        </div></div>`).join("") : '<p class="muted">這個話題還沒有評分標的</p>'}
+    <div class="row" style="margin-top:8px;">
+      <button onclick="addTarget('${t.id}','team',null)">＋ 新增隊伍</button>
+      <button onclick="addTarget('${t.id}','whole',null)">＋ 新增整體標的</button>
+    </div>
+  </div>`;
+}
+// ---- 英雄聯盟：逐局 / 全場選手（三層結構）----
+const LOL_POS = { Top:"上", Jungle:"野", Mid:"中", Bot:"AD", Support:"輔" };
+function lolTargetsPanel(t, list){
+  const sideLabel = s => s==='blue' ? (t.home_short||"主隊") : s==='red' ? (t.away_short||"客隊") : "—";
+  const bySide = (a,b)=> (a.side===b.side ? (a.sort_order-b.sort_order) : (a.side==='blue'?-1:1));
+  const games = list.filter(x=>x.kind==='game').sort((a,b)=>a.sort_order-b.sort_order);
+  const sp    = list.filter(x=>x.kind==='series_player').sort(bySide);
+  const playersOf = gid => list.filter(x=>x.kind==='player'&&x.parent_id===gid).sort(bySide);
+  const prow = x => {
+    const champ = x.champion_icon
+      ? `<img src="${esc(x.champion_icon)}" onerror="this.style.display='none'" style="width:22px;height:22px;border-radius:5px;flex:none"/>`
+      : `<span style="width:22px;flex:none"></span>`;
+    return `<div class="row" style="margin:3px 0 3px 10px;gap:6px;align-items:center;">
+      <span class="pill" style="min-width:46px;text-align:center;flex:none">${esc(sideLabel(x.side))}</span>
+      <span class="muted" style="width:20px;flex:none">${LOL_POS[x.position]||""}</span>
+      ${champ}
+      <input class="grow" value="${esc(x.name)}" id="t_n_${x.id}" style="min-width:80px"/>
+      <input value="${esc(x.subtitle||"")}" id="t_s_${x.id}" placeholder="KDA・英雄" style="max-width:140px"/>
+      <input type="hidden" id="t_c_${x.id}" value="${intToHexColor(x.color_hex)}"/>
+      <input type="hidden" id="t_o_${x.id}" value="${x.sort_order}"/>
+      <button class="primary" onclick="saveTarget('${x.id}','${t.id}')">存</button>
+      <button class="danger" onclick="delTarget('${x.id}','${t.id}')">刪</button>
+      <button onclick="toggleTargetInfo('${x.id}','${t.id}')">${DT.tOpen===x.id?'收起':'評分/留言'}</button>
+    </div>` + (DT.tOpen===x.id ? targetInfoPanel(x.id) : "");
+  };
+  return `<div class="card" style="background:var(--surface2);margin-top:10px;">
+    <h2>逐局選手（英雄聯盟）</h2>
+    ${games.length ? games.map(g=>`<div style="border-top:1px solid var(--surface);padding-top:6px;margin-top:6px;">
+        <b>${esc(g.name)}</b> ${g.side?`<span class="pill ok">${esc(sideLabel(g.side))} 勝</span>`:'<span class="muted" style="font-size:12px">（勝負未定/未判定）</span>'}
+        ${playersOf(g.id).map(prow).join("") || '<p class="muted" style="margin-left:10px">（本局尚無選手）</p>'}
+      </div>`).join("") : '<p class="muted">尚無逐局資料（比賽開打後由 Riot 即時長出）</p>'}
+    <h2 style="margin-top:14px">全場選手 · 對位面板</h2>
+    ${sp.length ? sp.map(prow).join("") : '<p class="muted">尚無全場選手</p>'}
+    <p class="muted" style="margin-top:8px;font-size:12px;">逐局英雄/KDA/勝負由 Riot 即時更新；手動修改會鎖定本場、停止自動覆蓋（可在「編輯」裡解鎖）。</p>
+  </div>`;
+}
+async function saveTarget(id, topicId){
+  const patch = { name:$("#t_n_"+id).value.trim(), subtitle:$("#t_s_"+id).value.trim()||null,
+                  color_hex:hexColorToInt($("#t_c_"+id).value), sort_order:parseInt($("#t_o_"+id).value||"0",10) };
+  if(!patch.name){ toast("名稱不能空"); return; }
+  const { error } = await sb.from("rating_targets").update(patch).eq("id",id);
+  if(error){ toast("失敗："+error.message); return; }
+  toast("已儲存"); await lockParentTopic(topicId); loadTargets(topicId);
+}
+async function addTarget(topicId, kind, parentId){
+  const name = prompt(kind==='player'?"球員名稱：":(kind==='team'?"隊伍名稱：":"標的名稱："));
+  if(!name||!name.trim()) return;
+  const row = { topic_id:topicId, parent_id:parentId, kind, name:name.trim(), color_hex:0xE8833A, sort_order:99 };
+  const { error } = await sb.from("rating_targets").insert(row);
+  if(error){ toast("新增失敗："+error.message); return; }
+  toast("已新增"); await lockParentTopic(topicId); loadTargets(topicId);
+}
+async function delTarget(id, topicId){
+  const x = (DT.targets[topicId]||[]).find(t=>t.id===id);
+  if(!confirm(`刪除「${x?x.name:"此標的"}」？其下球員與相關評分/留言會一併刪除。`)) return;
+  const { error } = await sb.from("rating_targets").delete().eq("id",id);
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); await lockParentTopic(topicId); loadTargets(topicId);
+}
+async function lockParentTopic(topicId){      // 改動標的也鎖定母比賽，避免爬蟲覆蓋
+  const t = DT.topics.find(x=>x.id===topicId);
+  if(t && isMatch(t) && !t.locked){ await sb.from("topics").update({locked:true}).eq("id",topicId); t.locked=true; }
+}
+// ---- 某個標的（球員/隊伍/全場）的評分分佈 + 留言（可直接刪）----
+function toggleTargetInfo(tid, topicId){
+  if(DT.tOpen===tid){ DT.tOpen=null; renderDataList(); return; }
+  DT.tOpen=tid;
+  if(DT.tInfo[tid]) renderDataList(); else loadTargetInfo(tid);
+}
+async function loadTargetInfo(tid){
+  const [r1, r2] = await Promise.all([
+    sb.from("ratings").select("score").eq("target_id", tid).limit(2000),
+    sb.from("comments").select("id,user_id,body,score,like_count,created_at,parent_comment_id")
+      .eq("target_id", tid).order("like_count",{ascending:false}).limit(300),
+  ]);
+  const comments = r2.data || [];
+  const ids = [...new Set(comments.map(c=>c.user_id))];
+  const authors = {};
+  if(ids.length){
+    const { data:profs } = await sb.from("profiles").select("id,display_name,is_bot").in("id", ids);
+    (profs||[]).forEach(p=>authors[p.id]=p);
+  }
+  DT.tInfo[tid] = { ratings:(r1.data||[]).map(r=>r.score), comments, authors, humanOnly:false };
+  if(r1.error||r2.error) toast("讀取部分失敗："+((r1.error||r2.error).message));
+  renderDataList();
+}
+function toggleHumanOnly(tid){ const i=DT.tInfo[tid]; if(i){ i.humanOnly=!i.humanOnly; renderDataList(); } }
+async function delTargetComment(cid, tid){
+  if(!confirm("刪除這則留言？（含其底下回覆）")) return;
+  const { error } = await sb.rpc("admin_delete_comment",{ cid });
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除"); loadTargetInfo(tid);
+}
+function targetInfoPanel(tid){
+  const info = DT.tInfo[tid];
+  if(!info) return `<div class="card" style="background:var(--surface);margin:4px 0 8px 12px;"><p class="muted">載入中…</p></div>`;
+  const { ratings, comments, authors, humanOnly } = info;
+  const n=ratings.length, avg=n?(ratings.reduce((a,b)=>a+b,0)/n):0;
+  const buckets=Array(10).fill(0); ratings.forEach(s=>{ if(s>=1&&s<=10) buckets[s-1]++; });
+  const maxB=Math.max(1,...buckets);
+  const bars = buckets.map((c,i)=>`<div title="${i+1}分：${c}人" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;">
+      <div style="width:100%;background:var(--brand);height:${Math.round(c/maxB*44)}px;min-height:1px;border-radius:2px 2px 0 0;"></div>
+      <span class="muted" style="font-size:10px">${i+1}</span></div>`).join("");
+  let cs = humanOnly ? comments.filter(c=>!(authors[c.user_id]||{}).is_bot) : comments;
+  const crow=c=>{ const a=authors[c.user_id]||{};
+    const tag=a.is_bot?'<span class="pill">🤖</span>':'<span class="pill ok">真人</span>';
+    const reply=c.parent_comment_id?'<span class="muted" style="font-size:11px">↳回覆</span> ':'';
+    return `<div class="row" style="padding:5px 0;border-bottom:1px solid var(--surface2);align-items:flex-start;">
+      <div class="grow"><div>${reply}${esc(c.body||"（圖片留言）")}</div>
+        <div class="muted" style="font-size:11px">${tag} ${esc(a.display_name||short(c.user_id))} · ${c.score!=null?c.score+"分 · ":""}♥${c.like_count||0} · ${new Date(c.created_at).toLocaleDateString()}</div></div>
+      <button class="danger" onclick="delTargetComment('${c.id}','${tid}')">刪</button></div>`; };
+  return `<div class="card" style="background:var(--surface);margin:4px 0 8px 12px;">
+    <div class="row"><b style="color:var(--brand);font-size:18px">${avg.toFixed(1)}</b><span class="muted">分 · ${n} 人評</span>
+      <span class="grow"></span>
+      <label style="margin:0;font-size:12px;display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" style="width:auto" ${humanOnly?"checked":""} onchange="toggleHumanOnly('${tid}')"/>只看真人</label></div>
+    <div class="row" style="align-items:flex-end;height:52px;gap:2px;margin:6px 0">${bars}</div>
+    <div class="muted" style="font-size:12px;margin:8px 0 2px">留言 ${cs.length} 則（依讚數排序）</div>
+    ${cs.slice(0,50).map(crow).join("") || '<p class="muted">尚無留言</p>'}
+    ${cs.length>50?`<p class="muted" style="font-size:11px">（只顯示前 50 則；要全面搜尋可用「留言審核」分頁）</p>`:""}
+  </div>`;
+}
+
+// ---- 新增比賽 / 話題 ----
+function openNewTopic(){
+  const el=$("#data-new"); if(el.innerHTML){ el.innerHTML=""; return; }
+  const matchKind = catMeta(DT.cat).kind==='match';
+  el.innerHTML = `<div class="card" style="border-color:var(--brand);">
+    <h2>新增${matchKind?'比賽':'話題'}（${esc(DT.cat||'')}）</h2>
+    <div class="row">
+      <div class="grow"><label>類型</label><select id="n_type" onchange="document.getElementById('n_game').style.display=this.value==='cpbl_game'?'block':'none'">
+        <option value="cpbl_game"${matchKind?' selected':''}>比賽（兩隊對戰）</option><option value="user_topic"${matchKind?'':' selected'}>一般話題</option></select></div>
+      <div class="grow"><label>分類</label><input id="n_cat" value="${esc(DT.cat||'')}" placeholder="棒球 / 影劇…"/></div>
+    </div>
+    <label>標題</label><input id="n_title" placeholder="客隊 vs 主隊　或　話題名稱"/>
+    <div class="row">
+      <div class="grow"><label>狀態</label><select id="n_status">
+        <option value="upcoming">未開始</option><option value="live">進行中</option><option value="ended">已結束</option></select></div>
+      <div class="grow"><label>開始時間</label><input type="datetime-local" id="n_start"/></div>
+    </div>
+    <div id="n_game" style="display:${matchKind?'block':'none'}">
+      <div class="row">
+        <div class="grow"><label>客隊簡稱</label><input id="n_away" placeholder="客隊"/></div>
+        <div class="grow"><label>主隊簡稱</label><input id="n_home" placeholder="主隊"/></div>
+      </div>
+      <p class="muted">建立後可在「隊伍 / 球員」裡加球員。</p>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="primary" onclick="createTopic()">建立</button>
+      <button class="ghost" onclick="document.getElementById('data-new').innerHTML=''">取消</button>
+    </div>
+  </div>`;
+}
+async function createTopic(){
+  const type=$("#n_type").value, title=$("#n_title").value.trim(), cat=$("#n_cat").value.trim();
+  if(!title||!cat){ toast("請填標題與分類"); return; }
+  const game = type==='cpbl_game';
+  const home = game?($("#n_home").value.trim()||"主隊"):null, away = game?($("#n_away").value.trim()||"客隊"):null;
+  const topic = { type, category:cat, title, status:$("#n_status").value,
+    rating_scope: game?"team":"whole", starts_at: fromLocalInput($("#n_start").value),
+    home_short:home, away_short:away, home_color: game?0xE8833A:null, away_color: game?0x7FA0B3:null, locked:true };
+  const { data, error } = await sb.from("topics").insert(topic).select().single();
+  if(error){ toast("建立失敗："+error.message); return; }
+  const targets = game
+    ? [{topic_id:data.id,parent_id:null,kind:"team",name:home,subtitle:"主場",color_hex:0xE8833A,sort_order:0},
+       {topic_id:data.id,parent_id:null,kind:"team",name:away,subtitle:"客隊",color_hex:0x7FA0B3,sort_order:1}]
+    : [{topic_id:data.id,parent_id:null,kind:"whole",name:title,subtitle:null,color_hex:0xE8833A,sort_order:0}];
+  const { error:e2 } = await sb.from("rating_targets").insert(targets);
+  if(e2){ toast("比賽已建，標的失敗："+e2.message); }
+  else toast("已建立 ✅");
+  $("#data-new").innerHTML=""; await loadCats(); fetchTopics();
+}
+
+// ---- 狸聞管理（news：列表/編輯/刪除/手寫）----
+const NEWS_CONTAINER = "99999999-9999-4999-8999-999999999999";   // 隱形新聞容器話題（留言標的掛它下面）
+
+async function loadNews(){
+  const el=$("#tab-news");
+  el.innerHTML = `<h2>狸聞快報 · 自動抓的可改，也能自己寫</h2>
+    <div class="row" style="margin-bottom:10px;">
+      <button class="primary" onclick="openNewNews()">＋ 寫一則狸聞</button>
+      <span class="grow"></span><span class="muted" id="newscount"></span>
+    </div>
+    <div id="news-new"></div>
+    <div id="news-list"><p class="muted">載入中…</p></div>`;
+  const { data, error } = await sb.from("news").select("*").order("published_at",{ascending:false}).limit(100);
+  if(error){ $("#news-list").innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  $("#newscount").textContent = `${data.length} 則`;
+  $("#news-list").innerHTML = data.length ? data.map(newsCard).join("") : '<p class="empty">還沒有狸聞</p>';
+}
+function newsCard(n){
+  const src = n.source==="manual" ? '<span class="pill ok">手寫</span>' : '<span class="pill">'+esc(n.origin_source||"自動")+'</span>';
+  return `<div class="card">
+    <div class="row">${src}<span class="muted">${n.published_at?new Date(n.published_at).toLocaleString():""}</span></div>
+    <label>標題</label><input id="nt_${n.id}" value="${esc(n.title)}"/>
+    <label>摘要（卡片上的一兩句）</label><input id="ns_${n.id}" value="${esc(n.summary||"")}"/>
+    <label>站內短文（內頁正文）</label>
+    <textarea id="nb_${n.id}" rows="3" style="width:100%;font:inherit;background:var(--surface2);color:var(--text);border:1px solid #3a322e;border-radius:10px;padding:9px 11px;">${esc(n.body||"")}</textarea>
+    <div class="row" style="margin-top:6px;">
+      <div class="grow"><label>原文連結（可空）</label><input id="nu_${n.id}" value="${esc(n.origin_url||"")}"/></div>
+      <div style="max-width:130px"><label>來源名</label><input id="no_${n.id}" value="${esc(n.origin_source||"")}"/></div>
+      <div><label>封面色</label><input type="color" id="nc_${n.id}" value="${intToHexColor(n.color_hex)}" style="padding:2px;height:40px;width:52px"/></div>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <button class="primary" onclick="saveNews('${n.id}')">儲存</button>
+      <span class="grow"></span>
+      <button class="danger" onclick="delNews('${n.id}','${n.target_id||""}')">刪除</button>
+    </div></div>`;
+}
+async function saveNews(id){
+  const patch={ title:$("#nt_"+id).value.trim(), summary:$("#ns_"+id).value.trim()||null,
+    body:$("#nb_"+id).value.trim()||null, origin_url:$("#nu_"+id).value.trim(),
+    origin_source:$("#no_"+id).value.trim()||null, color_hex:hexColorToInt($("#nc_"+id).value) };
+  if(!patch.title){ toast("標題不能空"); return; }
+  const { error } = await sb.from("news").update(patch).eq("id",id);
+  if(error){ toast("儲存失敗："+error.message); return; }
+  toast("已儲存"); loadNews();
+}
+async function delNews(id, targetId){
+  if(!confirm("刪除這則狸聞？底下的留言也會一併刪除。")) return;
+  const { error } = await sb.from("news").delete().eq("id",id);
+  if(error){ toast("刪除失敗："+error.message); return; }
+  if(targetId) await sb.from("rating_targets").delete().eq("id",targetId);   // 連帶清留言標的
+  toast("已刪除"); loadNews();
+}
+function openNewNews(){
+  const el=$("#news-new"); if(el.innerHTML){ el.innerHTML=""; return; }
+  el.innerHTML = `<div class="card" style="border-color:var(--brand);">
+    <h2>寫一則狸聞</h2>
+    <label>標題（必填）</label><input id="mn_title" placeholder="例如：評評狸 1.1 上線，新增狸聞快報！"/>
+    <label>摘要（卡片上的一兩句，可空）</label><input id="mn_summary"/>
+    <label>站內短文（內頁正文，可空）</label>
+    <textarea id="mn_body" rows="4" style="width:100%;font:inherit;background:var(--surface2);color:var(--text);border:1px solid #3a322e;border-radius:10px;padding:9px 11px;"></textarea>
+    <div class="row" style="margin-top:6px;">
+      <div class="grow"><label>原文連結（可空）</label><input id="mn_url" placeholder="https://…"/></div>
+      <div style="max-width:120px"><label>來源名</label><input id="mn_src" value="評評狸"/></div>
+      <div style="max-width:110px"><label>分類</label><select id="mn_cat"><option>棒球</option><option>綜合</option></select></div>
+      <div><label>封面色</label><input type="color" id="mn_color" value="#e8833a" style="padding:2px;height:40px;width:52px"/></div>
+    </div>
+    <div class="row" style="margin-top:10px;">
+      <button class="primary" onclick="createNews()">發佈</button>
+      <button class="ghost" onclick="document.getElementById('news-new').innerHTML=''">取消</button>
+    </div></div>`;
+}
+async function createNews(){
+  const title=$("#mn_title").value.trim();
+  if(!title){ toast("請填標題"); return; }
+  // 容器話題（沒建過就補）＋ 留言標的
+  await sb.from("topics").upsert({ id:NEWS_CONTAINER, type:"news_container", category:"_news", title:"_news",
+    rating_scope:"whole", status:"ended", starts_at:"2000-01-01T00:00:00Z", locked:true }, { onConflict:"id" });
+  const { data:tg, error:e1 } = await sb.from("rating_targets")
+    .insert({ topic_id:NEWS_CONTAINER, kind:"whole", name:title.slice(0,40), color_hex:15237434, sort_order:0 })
+    .select().single();
+  if(e1){ toast("建留言標的失敗："+e1.message); return; }
+  const { error } = await sb.from("news").insert({
+    source:"manual", source_key:"manual-"+Date.now(), category:$("#mn_cat").value,
+    title, summary:$("#mn_summary").value.trim()||null, body:$("#mn_body").value.trim()||null,
+    origin_url:$("#mn_url").value.trim(), origin_source:$("#mn_src").value.trim()||null,
+    color_hex:hexColorToInt($("#mn_color").value), published_at:new Date().toISOString(),
+    target_id:tg.id });
+  if(error){ toast("發佈失敗："+error.message); return; }
+  toast("已發佈 ✅"); $("#news-new").innerHTML=""; loadNews();
+}
+
+// ---- 自動沿用既有登入 ----
+(async()=>{ const { data:{ session } } = await sb.auth.getSession(); if(session) afterLogin(session.user); })();
+</script>
+</body>
+</html>
