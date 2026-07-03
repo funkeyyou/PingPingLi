@@ -66,6 +66,7 @@
     <span id="who" class="muted"></span>
     <button class="ghost" onclick="doLogout()">登出</button>
   </header>
+  <div id="health-banner" style="display:none"></div>
   <div class="tabs">
     <button data-tab="dashboard" class="active" onclick="switchTab('dashboard')">儀表板</button>
     <button data-tab="retention" onclick="switchTab('retention')">📊 留存</button>
@@ -131,6 +132,8 @@ async function afterLogin(user){
   $("#app").classList.remove("hidden");
   $("#who").textContent = (prof.display_name||user.email);
   loadDashboard();
+  loadHealthBanner();                       // 全域告警橫幅（所有分頁可見）
+  setInterval(loadHealthBanner, 60000);     // 每分鐘自動刷新
 }
 async function doLogout(){ await sb.auth.signOut(); location.reload(); }
 
@@ -898,6 +901,49 @@ async function loadScriptHealth(){
       <span class="muted grow" style="font-size:11px;overflow:hidden;text-overflow:ellipsis">${esc(r.detail||"")}</span>
       <span class="pill ${cls}" style="white-space:nowrap">${status}</span></div>`;
   }).join("");
+}
+
+// ---- 全域告警橫幅（讀 script_heartbeats；把「看門狗」那套判斷＋DeepSeek 中斷/用量告警搬到後台，任何分頁都看得到，免推播）----
+const BACKUP_STALE_MIN = 1560;   // 每日備份，超過 26h 沒成功就算告警
+async function loadHealthBanner(){
+  const el=$("#health-banner"); if(!el) return;
+  const { data, error } = await sb.from("script_heartbeats").select("*");
+  if(error) return;                                   // 讀不到（未登入/權限）就不顯示，免誤報
+  const map={}; (data||[]).forEach(r=>map[r.script]=r);
+  const now=Date.now();
+  const ageOf=r=>Math.round((now-new Date(r.last_run))/60000);
+  const ago=m=>m<1?"剛剛":m<60?`${m}分前`:`${Math.round(m/60)}小時前`;
+  const red=[], warn=[];
+  SCRIPTS.forEach(({key:k,label:name,stale:staleMin})=>{
+    const short=name.split("：")[0];                  // 長標籤只取冒號前短名
+    const r=map[k];
+    if(!r){ red.push(`${short}：尚無心跳紀錄`); return; }
+    const age=ageOf(r), soft=/用量偏高/.test(r.detail||"");
+    if(!r.ok){ (soft?warn:red).push(`${short}：${esc(r.detail||"上次執行有錯")}（${ago(age)}）`); }
+    else if(soft){ warn.push(`${short}：${esc(r.detail)}（${ago(age)}）`); }
+    else if(age>staleMin){ red.push(`${short}：⏰ 太久沒跑（${ago(age)}）`); }
+  });
+  const b=map["backup"];
+  if(!b) red.push("每日備份：尚無紀錄");
+  else if(!b.ok) red.push(`每日備份：${esc(b.detail||"失敗")}（${ago(ageOf(b))}）`);
+  else if(ageOf(b)>BACKUP_STALE_MIN) red.push(`每日備份：⏰ 超過 26h 沒成功（${ago(ageOf(b))}）`);
+  const t=new Date().toLocaleTimeString("zh-TW",{hour:"2-digit",minute:"2-digit"});
+  const base="display:block;margin:10px 16px 0;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.65;";
+  if(red.length){
+    el.style.cssText=base+"background:rgba(229,84,75,.14);border:1px solid var(--danger);color:#ffd7d4;";
+    el.innerHTML=`<b style="color:var(--danger)">🚨 ${red.length} 項告警</b>`
+      +red.map(x=>`<div>• ${x}</div>`).join("")
+      +warn.map(x=>`<div style="color:var(--brand)">• ${x}</div>`).join("")
+      +`<div style="color:var(--sub);font-size:11px;margin-top:4px">最後檢查 ${t}·每分鐘自動刷新</div>`;
+  } else if(warn.length){
+    el.style.cssText=base+"background:rgba(232,131,58,.14);border:1px solid var(--brand);color:#ffcf9f;";
+    el.innerHTML=`<b style="color:var(--brand)">⚠️ ${warn.length} 項提醒</b>`
+      +warn.map(x=>`<div>• ${x}</div>`).join("")
+      +`<div style="color:var(--sub);font-size:11px;margin-top:4px">最後檢查 ${t}</div>`;
+  } else {
+    el.style.cssText=base+"background:rgba(63,163,114,.12);border:1px solid rgba(63,163,114,.4);color:var(--ok);";
+    el.innerHTML=`✅ 系統正常 · 全部腳本心跳正常、備份最新 <span style="color:var(--sub);font-size:11px">（最後檢查 ${t}）</span>`;
+  }
 }
 
 // ---- AI 自動化開關（存 app_config；排程腳本每輪開跑前讀取）----
