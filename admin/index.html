@@ -389,8 +389,11 @@ async function loadRetention(){
 // ---- 檢舉審核 ----
 async function loadReports(){
   const el=$("#tab-reports"); el.innerHTML='<p class="muted">載入中…</p>';
-  const { data:reports, error } = await sb.from("reports").select("*").order("created_at",{ascending:false});
-  if(error){ el.innerHTML='<p class="empty">讀取失敗：'+esc(error.message)+'</p>'; return; }
+  // 待處理與已處理分開查，避免踩 Supabase 單次 1000 列上限把舊的 pending 靜默截掉（待處理先進先出、最舊在上）。
+  const { data:pend, error:e1 } = await sb.from("reports").select("*").eq("status","pending").order("created_at",{ascending:true}).limit(1000);
+  const { data:done, error:e2 } = await sb.from("reports").select("*").neq("status","pending").order("created_at",{ascending:false}).limit(30);
+  if(e1||e2){ el.innerHTML='<p class="empty">讀取失敗：'+esc((e1||e2).message)+'</p>'; return; }
+  const reports=[...(pend||[]), ...(done||[])];
   // 抓被檢舉留言的內容 + 被檢舉話題的標題
   const cids=[...new Set(reports.filter(r=>r.target_type==="comment").map(r=>r.target_id))];
   let bodies={};
@@ -398,9 +401,13 @@ async function loadReports(){
   const tids=[...new Set(reports.filter(r=>r.target_type==="topic").map(r=>r.target_id))];
   let topicTitles={};
   if(tids.length){ const {data:ts}=await sb.from("topics").select("id,title").in("id",tids); (ts||[]).forEach(t=>topicTitles[t.id]=t.title); }
-  const pend = reports.filter(r=>r.status==="pending");
-  el.innerHTML = `<h2>待處理 ${pend.length} 件 · 全部 ${reports.length} 件</h2>` + (reports.length? reports.map(r=>{
-    const body = r.target_type==="comment" ? (bodies[r.target_id] ?? "（留言已刪除）")
+  const capHit=(pend||[]).length>=1000;
+  el.innerHTML = `<h2>待處理 ${(pend||[]).length}${capHit?'+':''} 件 · 另列最近 ${(done||[]).length} 件已處理</h2>`
+    + (capHit?'<p class="muted" style="color:var(--danger)">⚠️ 待處理已達 1000 上限，請盡快清理</p>':'')
+    + (reports.length? reports.map(r=>{
+    const isComment = r.target_type==="comment";
+    const commentExists = isComment && bodies[r.target_id]!==undefined;
+    const body = isComment ? (bodies[r.target_id] ?? "（留言已刪除）")
                : r.target_type==="topic"   ? ("話題："+(topicTitles[r.target_id] ?? "（已刪除）"))
                : "（檢舉使用者）";
     const st = r.status==="pending"?'<span class="pill warn">待處理</span>': r.status==="actioned"?'<span class="pill ok">已處理</span>':'<span class="pill">已忽略</span>';
@@ -409,6 +416,7 @@ async function loadReports(){
       <p style="margin:8px 0;">${esc(body)}</p>
       <p class="muted">被檢舉者：${short(r.reported_user)} · 檢舉者：${short(r.reporter_id)}</p>
       <div class="row" style="margin-top:6px;">
+        ${commentExists?`<button class="danger" onclick="deleteReportedComment('${r.target_id}','${r.id}')">🗑 刪除留言</button>`:""}
         <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',7)">封 7 天</button>
         <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',30)">封 30 天</button>
         <button class="danger" onclick="banFromReport('${r.reported_user}','${r.id}',0)">永久封禁</button>
@@ -416,6 +424,13 @@ async function loadReports(){
         <button onclick="setReport('${r.id}','actioned')">標記已處理</button>
       </div></div>`;
   }).join("") : '<p class="empty">目前沒有檢舉 🎉</p>');
+}
+async function deleteReportedComment(cid, reportId){
+  if(!confirm("刪除這則被檢舉的留言？")) return;
+  const { error } = await sb.rpc("admin_delete_comment",{ cid });
+  if(error){ toast("刪除失敗："+error.message); return; }
+  await sb.rpc("admin_set_report_status",{ report:reportId, new_status:"actioned" });
+  toast("已刪除留言並標記處理"); loadReports();
 }
 async function banFromReport(uid, reportId, days){
   if(!uid || uid==="null"){ toast("這筆沒有被檢舉者 id"); return; }
