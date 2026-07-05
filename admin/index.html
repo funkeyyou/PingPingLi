@@ -569,6 +569,11 @@ async function showUser(uid){
         : `<button class="danger" onclick="quickBan('${p.id}',7,()=>showUser('${p.id}'))">封7天</button>
            <button class="danger" onclick="quickBan('${p.id}',30,()=>showUser('${p.id}'))">封30天</button>
            <button class="danger" onclick="quickBan('${p.id}',0,()=>showUser('${p.id}'))">永久封禁</button>`}
+    </div>
+    <div class="row" style="margin-top:8px;gap:6px;">
+      <input id="rename-input" value="${esc(p.display_name)}" style="flex:1;max-width:220px;">
+      <button onclick="adminRename('${p.id}')">改暱稱</button>
+      <button class="danger" onclick="adminClearAvatar('${p.id}')">清空頭像</button>
     </div></div>
   <h2 style="font-size:15px;margin-top:14px;">最近留言（${(coms.data||[]).length}）</h2>
   ${(coms.data&&coms.data.length)? coms.data.map(c=>`<div class="card">
@@ -577,6 +582,19 @@ async function showUser(uid){
         ${c.score!=null?`<span class="pill">評分 ${c.score}</span>`:""}<span class="grow"></span>
         <button class="danger" onclick="delUserComment('${c.id}','${p.id}')">刪除</button></div></div>`).join("")
     : '<p class="empty">沒有留言</p>'}`;
+}
+async function adminRename(uid){
+  const v=($("#rename-input").value||"").trim();
+  if(!v){ toast("暱稱不能空"); return; }
+  const { error } = await sb.rpc("admin_set_profile",{ target:uid, new_name:v, clear_avatar:false });
+  if(error){ toast("改名失敗："+error.message); return; }
+  toast("已改暱稱"); showUser(uid);
+}
+async function adminClearAvatar(uid){
+  if(!confirm("清空這個用戶的頭像？")) return;
+  const { error } = await sb.rpc("admin_set_profile",{ target:uid, new_name:null, clear_avatar:true });
+  if(error){ toast("清頭像失敗："+error.message); return; }
+  toast("已清空頭像"); showUser(uid);
 }
 async function delUserComment(cid, uid){
   if(!confirm("刪除這則留言？")) return;
