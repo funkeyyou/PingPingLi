@@ -879,10 +879,40 @@ async function loadAutomation(){
   el.innerHTML = `<h2>自動化 · 腳本與 AI 開關</h2>
     <div class="card"><label>🩺 腳本健康 <span class="muted">（每 30 分一輪；「太久沒跑」多半是 Mac 睡著或排程掛了，「上次有錯」點開細節看）</span></label>
       <div id="script-health" style="margin-top:6px"><p class="muted">載入中…</p></div></div>
+    <div class="card"><label>🚫 敏感詞過濾 <span class="muted">（真人發文/留言含這些詞會被擋下；機器人不受影響。清單空的時候不擋任何內容）</span></label>
+      <div class="row" style="margin-top:8px;gap:6px;">
+        <input id="bw-input" placeholder="新增要過濾的詞…" style="flex:1;" onkeydown="if(event.key==='Enter')addBannedWord()">
+        <button class="primary" onclick="addBannedWord()">新增</button>
+      </div>
+      <div id="banned-words" style="margin-top:8px"><p class="muted">載入中…</p></div></div>
     <p class="muted">控制爬蟲與機器人各功能的開關；關掉的功能下一輪排程（30 分鐘內）就會停。核心資料（賽程比分）平時別關。</p>
     <div class="card"><div id="ai-switches"><p class="muted">載入中…</p></div></div>`;
   loadScriptHealth();
+  loadBannedWords();
   loadAISwitches();
+}
+let _bwList=[];
+async function loadBannedWords(){
+  const el=$("#banned-words"); if(!el) return;
+  const { data, error } = await sb.from("banned_words").select("word").order("word");
+  if(error){ el.innerHTML='<span class="muted">讀取失敗：'+esc(error.message)+'</span>'; return; }
+  _bwList=(data||[]).map(w=>w.word);
+  if(!_bwList.length){ el.innerHTML='<span class="muted">（目前沒有敏感詞，不會擋任何內容）</span>'; return; }
+  el.innerHTML=_bwList.map((w,i)=>`<span class="pill" style="margin:3px 5px 0 0;display:inline-flex;align-items:center;gap:5px;">${esc(w)} <a href="#" onclick="removeBannedWord(${i});return false;" style="color:var(--danger);text-decoration:none;font-weight:800;">×</a></span>`).join("");
+}
+async function addBannedWord(){
+  const inp=$("#bw-input"); const w=(inp.value||"").trim();
+  if(!w) return;
+  const { error } = await sb.from("banned_words").insert({ word:w });
+  if(error){ toast("新增失敗："+error.message); return; }
+  inp.value=""; toast("已新增「"+w+"」"); loadBannedWords();
+}
+async function removeBannedWord(i){
+  const w=_bwList[i]; if(w==null) return;
+  if(!confirm("移除敏感詞「"+w+"」？")) return;
+  const { error } = await sb.from("banned_words").delete().eq("word", w);
+  if(error){ toast("移除失敗："+error.message); return; }
+  toast("已移除"); loadBannedWords();
 }
 // ---- 腳本健康（讀 script_heartbeats）----
 // stale＝多久沒跑算「太久沒跑」（分鐘）。lol_live 每 3 分跑→門檻收緊；push_sync 只在比賽剛結束才跑→放寬。
