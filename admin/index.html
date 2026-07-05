@@ -574,6 +574,7 @@ async function showUser(uid){
       <input id="rename-input" value="${esc(p.display_name)}" style="flex:1;max-width:220px;">
       <button onclick="adminRename('${p.id}')">改暱稱</button>
       <button class="danger" onclick="adminClearAvatar('${p.id}')">清空頭像</button>
+      ${p.is_admin?"":`<button class="danger" onclick="adminDeleteUser('${p.id}')">🗑 刪帳號</button>`}
     </div></div>
   <h2 style="font-size:15px;margin-top:14px;">最近留言（${(coms.data||[]).length}）</h2>
   ${(coms.data&&coms.data.length)? coms.data.map(c=>`<div class="card">
@@ -595,6 +596,12 @@ async function adminClearAvatar(uid){
   const { error } = await sb.rpc("admin_set_profile",{ target:uid, new_name:null, clear_avatar:true });
   if(error){ toast("清頭像失敗："+error.message); return; }
   toast("已清空頭像"); showUser(uid);
+}
+async function adminDeleteUser(uid){
+  if(!confirm("永久刪除此帳號？將一併刪除其暱稱佔用、話題、留言、評分，無法復原。")) return;
+  const { error } = await sb.rpc("admin_delete_user",{ target:uid });
+  if(error){ toast("刪除失敗："+error.message); return; }
+  toast("已刪除帳號"); loadUserLookup();
 }
 async function delUserComment(cid, uid){
   if(!confirm("刪除這則留言？")) return;
@@ -897,6 +904,8 @@ async function loadAutomation(){
   el.innerHTML = `<h2>自動化 · 腳本與 AI 開關</h2>
     <div class="card"><label>🩺 腳本健康 <span class="muted">（每 30 分一輪；「太久沒跑」多半是 Mac 睡著或排程掛了，「上次有錯」點開細節看）</span></label>
       <div id="script-health" style="margin-top:6px"><p class="muted">載入中…</p></div></div>
+    <div class="card"><label>📲 推播裝置 <span class="muted">（device_tokens 註冊數／環境；sandbox=Xcode 直裝、production=TestFlight/App Store）</span></label>
+      <div id="device-stats" style="margin-top:6px"><p class="muted">載入中…</p></div></div>
     <div class="card"><label>🚫 敏感詞過濾 <span class="muted">（真人發文/留言含這些詞會被擋下；機器人不受影響。清單空的時候不擋任何內容）</span></label>
       <div class="row" style="margin-top:8px;gap:6px;">
         <input id="bw-input" placeholder="新增要過濾的詞…" style="flex:1;" onkeydown="if(event.key==='Enter')addBannedWord()">
@@ -906,8 +915,17 @@ async function loadAutomation(){
     <p class="muted">控制爬蟲與機器人各功能的開關；關掉的功能下一輪排程（30 分鐘內）就會停。核心資料（賽程比分）平時別關。</p>
     <div class="card"><div id="ai-switches"><p class="muted">載入中…</p></div></div>`;
   loadScriptHealth();
+  loadDeviceStats();
   loadBannedWords();
   loadAISwitches();
+}
+async function loadDeviceStats(){
+  const el=$("#device-stats"); if(!el) return;
+  const { data, error } = await sb.rpc("admin_device_token_stats");
+  if(error){ el.innerHTML='<span class="muted">讀取失敗：'+esc(error.message)+'</span>'; return; }
+  if(!data || !data.length){ el.innerHTML='<span class="muted">目前沒有註冊裝置</span>'; return; }
+  const total=data.reduce((s,r)=>s+Number(r.cnt),0);
+  el.innerHTML=`<b style="color:var(--text);font-size:18px;">${total}</b> 台　`+data.map(r=>`<span class="pill">${esc(r.environment)}：${r.cnt}</span>`).join(" ");
 }
 let _bwList=[];
 async function loadBannedWords(){
