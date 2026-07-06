@@ -247,6 +247,8 @@ async function loadRetention(){
     gather("comments","user_id,created_at,body,target_id","user_id"),
     gather("topics","created_by,created_at,title","created_by",q=>q.eq("type","user_topic")),
   ]);
+  // P0 唯一指標之一：真人「自發評分率/留言率」＝有評過分（留過言）的真人 ÷ 全部真人（回答「進來的真人買不買單」）
+  const raters=new Set(rRows.map(r=>r.user_id)).size, commenters=new Set(cRows.map(c=>c.user_id)).size;
 
   // 4) 每位真人：註冊日 + 活動日 offset 集合
   const U={}; realProfs.forEach(p=>{ U[p.id]={name:p.display_name, signup:new Date(p.created_at), days:new Set(), odays:new Set(), acts:0, admin:p.is_admin}; });
@@ -350,6 +352,8 @@ async function loadRetention(){
       ${card(f(act7.size),"近 7 天活躍真人")}
       ${card(f(newToday),"今日新增真人")}
       ${card(pc(contributors,arr.length),"真人貢獻率", "有互動 / 全部真人")}
+      ${card(pc(raters,arr.length),"自發評分率", `評過分 ${f(raters)} 人 / 全部真人`)}
+      ${card(pc(commenters,arr.length),"自發留言率", `留過言 ${f(commenters)} 人 / 全部真人`)}
     </div>
 
     <h3 style="margin:16px 0 6px;">真人 vs 機器人 貢獻占比</h3>
